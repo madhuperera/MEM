@@ -22,5 +22,4 @@ else
         Write-Output "Error updating the System Locale Settings."
         exit $ExitWithError
     }
-
 }
