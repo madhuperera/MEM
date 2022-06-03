@@ -1,48 +1,35 @@
-# MEM (Microsoft Endpoint Manager a.)
-Welcome to Madhu's Repository of Scripts for [Datto RMM](https://www.datto.com/products/rmm/ "Datto RMM"). I am sharing these scripts **"AS IS" without any kind of warranty**. Please go through the scripts' content before deploying in your environment.
+# MEM (Microsoft Endpoint Manager *a.k.a. Microsoft Intune*)
+Welcome to Madhu's Repository of Scripts that you can use with Microsoft Endpoint Manager. I am sharing these scripts **"AS IS" without any kind of warranty**. Please go through the scripts' content before deploying in your environment.
 
 If you have any question about any of the scripts or you have an idea for a PowerShell based script, please leave a comment.
 
 ## Resources
-- [Functions](https://github.com/madhuperera/Datto_RMM/tree/main/Functions "Functions")
-- [Misc](https://github.com/madhuperera/Datto_RMM/tree/main/Misc "Misc")
-- [Monitoring](https://github.com/madhuperera/Datto_RMM/tree/main/Monitoring "Monitoring")
-- [Scripts](https://github.com/madhuperera/Datto_RMM/tree/main/Scripts "Scripts")
+- [Intune Win32 Apps](https://github.com/madhuperera/MEM/tree/main/Intune32_Apps "Intune Win32 Apps")
+- [Proactive Remediations](https://github.com/madhuperera/MEM/tree/main/Proactive_Remediations "Proactive Remediations")
 
-### Functions
-Series of repetative PowerShell codes that you can use within your own Scripts. For example, I use the piece of function below to exit the script with Error or Success. You can also use the same function to update output message and a Datto UDF (User Defined Field).
-```Shell
-function Update-OutputOnExit
-{
-    param
-    (
-        [String] $UDF_Value,
-        [bool] $ExitCode,
-        [String] $Results,
-        [String] $Registry_Value
-    )
+### Intune Win32 Apps
+Here, you can find a collection of Scripts and ideas on how to deploy Applications using Intune Win32 Apps. You can use this method to:
+- Install .exe Applications.
+- Run PowerShell Script on a Schedule.
+- Install Printers to Devices.
+- Copy Files to the End Devices.
 
-    if ($UDF_Value -and $Registry_Value)
-    {
-        New-ItemProperty -Path HKLM:\SOFTWARE\CentraStage\ -Name $UDF_Value -PropertyType String -Value $Registry_Value -Force
-    }
-        
-    write-host '<-Start Result->' -ErrorAction SilentlyContinue
-    write-host "STATUS=$Results" -ErrorAction SilentlyContinue
-    write-host '<-End Result->' -ErrorAction SilentlyContinue
-    exit $ExitCode
-}
-```
-### Misc
-Collection of Miscellaneous Scripts that are not part of Datto Monitoring or Scripts. For example, [Update-WarrantyDetailsUsingCsv](https://github.com/madhuperera/Datto_RMM/blob/main/Misc/Warranty/Update-WarrantyDetailsUsingCsv.ps1 "Update-WarrantyDetailsUsingCsv") is a PowerShell script that you can use to update Warranty Expiry Dates in Datto RMM using a CSV file. 
+You can find more information on how Win32 App Management works in Microsoft Intune [here](https://docs.microsoft.com/en-us/mem/intune/apps/apps-win32-app-management "here").
 
-### Monitoring
-Here, you will find a collection of PowerShell scripts that you can use with a Monitoring Policy in Datto RMM. Deploy these Scripts as a Monitoring Component in your Environment, so you can use them within Monitoring Policies. You can find more information on how to create a Datto RMM Monitor [here](https://rmm.datto.com/help/en/Content/4WEBPORTAL/Policies/MonitoringPolicy.htm "here").
+Please note that some packages found here will only have the Detection Script. You can use the Detection Script to detect if the application on the End Device meets your requirements or not. If not, you can simply include the Intune Win32 App package with the correct command to install the EXE within the application package.
 
-### Script
-This is collection of PowerShell scripts that you can use to carry out certain tasks on Windows Devices. While a monitoring Script can also be used as a Script in Datto, Scripts found here are not suitable to use with monitoring policies. 
+### Proactive Remediations
+Proactive Remediation Scripts are the best way to deploy PowerShell scripts to an end device using Microsoft Endpoint Manager. Here, you will find ideas for those scripts with samples. Proactive Remediation Package will have two primary components:
+1. Detection Script.
+2. Deployment Script.
 
+#### Detection Script
+These script will rerutn success or error to let Intune know if the device satisfies your requirements. If not, Install Script will get executed on the system.
 
+#### Deployment Script
+If the detection script finds out that the end device does not satisfy the requirements set by you, you can use the Deployment Script to remediate.
+
+Please go to Microsoft Docs to find more information on how [Proactive Remediations](https://docs.microsoft.com/en-us/mem/analytics/proactive-remediations "Proactive Remediations") work in Microsoft Endpoint Manager.
 
 ## Feedback
 Constructive feedback is always appreciated. I am doing most of these Scripts in my own Personal time, so I will not be able to update these as often as I would have liked to. If you find any issues with the Scripts, please leave a comment and I will try my best to get it sorted and update the Script. If you have an idea for a Script that could be useful for yourself as well as others, you can contact me using any of the Social Media platforms below:
