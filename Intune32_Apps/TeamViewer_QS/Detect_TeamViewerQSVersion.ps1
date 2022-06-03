@@ -9,7 +9,7 @@ if (Test-Path -Path $TeamViewerQS_FilePath -Type Leaf)
     $InstalledVersion = (Get-ItemProperty -Path $TeamViewerQS_FilePath).VersionInfo.ProductVersionRaw
     if ($InstalledVersion)
     {
-        if ($InstalledVersion.ProductVersion -ge $NewVersionToDeployed)
+        if ($InstalledVersion -ge $NewVersionToDeployed)
         {
             Write-Output "TeamViewer QS is up-to-date"
             exit $ExitWithNoError
