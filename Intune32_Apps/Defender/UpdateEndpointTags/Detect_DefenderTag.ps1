@@ -5,6 +5,26 @@
 [String] $SReg_Key_Value_Name = "Group"
 [String] $SReg_Key_Value_Data = "New_Zealand"
 
+function Update-OutputOnExit
+{
+    param
+    (
+        [bool] $F_ExitCode,
+        [String] $F_Message
+    )
+    
+    Write-Host "STATUS=$F_Message" -ErrorAction SilentlyContinue
+
+    if ($F_ExitCode)
+    {
+        exit 1
+    }
+    else
+    {
+        exit 0
+    }
+}
+
 function Test-RegistryKeyValue
 {
     param
@@ -34,9 +54,9 @@ function Test-RegistryKeyValue
 
 if (Test-RegistryKeyValue -F_Reg_Key_Parent_Path $SReg_Key_Parent_Path -F_Reg_Key_Name $SReg_Key_Name -F_Reg_Key_Value_Name $SReg_Key_Value_Name -F_Reg_Key_Value_Data $SReg_Key_Value_Data)
 {
-    exit $ExitWithNoError
+    Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
 }
 else
 {
-    exit $ExitWithError
+    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
 }
