@@ -94,13 +94,13 @@ If (Test-Path -Path "$PSScriptRoot\Driver")
     }
     catch
     {
-        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error adding $PrinterDriverModelName to Windows"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
     }
     
 }
 else
 {
-    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error Extracting Printer Drivers"
+    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
 }
 
 
@@ -113,7 +113,7 @@ if (!(Test-PrinterPortExists -PrinterFPortName $PrinterPortName))
     }
     catch
     {
-        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error adding Printer Port"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
     }
 }
 else
@@ -130,7 +130,7 @@ if (!(Test-PrinterExists -PrinterFName $PrinterName))
     }
     catch
     {
-        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error adding $PrinterName"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
     }
 }
 else
@@ -138,4 +138,4 @@ else
     write-host "$PrinterName aleady exists in the system!"
 }
 
-Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "$PrinterName has successfully been added!"
+Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
