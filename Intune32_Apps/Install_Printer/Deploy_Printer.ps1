@@ -26,39 +26,26 @@ param
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
 
-function Get-DeviceDetails
-{
-	
-	$Date_String = Get-Date -Format "dddd dd/MM/yyyy HH:mm:ss"
-	$ComputerName = $ENV:COMPUTERNAME
-	
-	$DeviceDetails = "`nScript running on the Computer: $ComputerName on $Date_String`n`n"
-	return $DeviceDetails
-
-}
-
 function Update-OutputOnExit
 {
     param
     (
-        [String] $UDF_Value,
-        [bool] $ExitCode,
-        [String] $Results,
-        [String] $Registry_Value
+        [bool] $F_ExitCode,
+        [String] $F_Message
     )
+    
+    Write-Host "STATUS=$F_Message" -ErrorAction SilentlyContinue
 
-    if ($UDF_Value)
+    if ($F_ExitCode)
     {
-        New-ItemProperty -Path HKLM:\SOFTWARE\CentraStage\ -Name $UDF_Value -PropertyType String -Value $Registry_Value -Force | Out-Null
+        exit 1
     }
-        
-    write-host '<-Start Result->' -ErrorAction SilentlyContinue
-    write-host "STATUS=$Results" -ErrorAction SilentlyContinue
-    write-host '<-End Result->' -ErrorAction SilentlyContinue
-    exit $ExitCode
+    else
+    {
+        exit 0
+    }
 }
 
-Get-DeviceDetails
 
 function Test-PrinterPortExists
 {
@@ -107,18 +94,18 @@ If (Test-Path -Path "$PSScriptRoot\Driver")
     }
     catch
     {
-        Update-OutputOnExit -ExitCode $ExitWithError -Results "Error adding $PrinterDriverModelName to Windows"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error adding $PrinterDriverModelName to Windows"
     }
     
 }
 else
 {
-    Update-OutputOnExit -ExitCode $ExitWithError -Results "Error Extracting Printer Drivers"
+    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error Extracting Printer Drivers"
 }
 
 
 # Installing the Printer Port
-if (!(Test-PrinterPortExists -PrinterPortName $PrinterPortName))
+if (!(Test-PrinterPortExists -PrinterFPortName $PrinterPortName))
 {
     try
     {
@@ -126,7 +113,7 @@ if (!(Test-PrinterPortExists -PrinterPortName $PrinterPortName))
     }
     catch
     {
-        Update-OutputOnExit -ExitCode $ExitWithError -Results "Error adding Printer Port"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error adding Printer Port"
     }
 }
 else
@@ -135,7 +122,7 @@ else
 }
 
 # Installing the Printer
-if (!(Test-PrinterExists -PrinterName $PrinterName))
+if (!(Test-PrinterExists -PrinterFName $PrinterName))
 {
     try
     {
@@ -143,7 +130,7 @@ if (!(Test-PrinterExists -PrinterName $PrinterName))
     }
     catch
     {
-        Update-OutputOnExit -ExitCode $ExitWithError -Results "Error adding $PrinterName"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "Error adding $PrinterName"
     }
 }
 else
@@ -151,4 +138,4 @@ else
     write-host "$PrinterName aleady exists in the system!"
 }
 
-Update-OutputOnExit -ExitCode $ExitWithNoError -Results "$PrinterName has successfully been added!"
+Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "$PrinterName has successfully been added!"
