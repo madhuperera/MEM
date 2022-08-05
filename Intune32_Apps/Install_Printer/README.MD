@@ -55,4 +55,17 @@ Currently I do not have a Script to uninstalling the printer, so you can have an
 Choose the option to use a custom detection script and upload "Detect_Printer.ps1" file.
 ![image](https://user-images.githubusercontent.com/37104267/183217761-b54008b5-58ed-4f1a-ac2a-49b8650354b3.png)
 
+After successful installation, MEM should report the printer as installed against each device.
+![image](https://user-images.githubusercontent.com/37104267/183224517-ee54c289-a679-4cd0-b06d-2402d7932593.png)
 
+## End User Experience
+If you had notifications enabled, staff member will get a notification when the printer is installed and ready to use.
+![image](https://user-images.githubusercontent.com/37104267/183224629-580305e3-3a04-413f-aa7b-da13b8ac04e7.png)
+
+How it looks in Settings on Windows 11.
+![image](https://user-images.githubusercontent.com/37104267/183224647-c5d22f6b-f16c-4e20-af4d-3757a273b588.png)
+![image](https://user-images.githubusercontent.com/37104267/183224661-c78980cf-fd22-4e31-a0e0-db7a6e51478f.png)
+![image](https://user-images.githubusercontent.com/37104267/183224672-623b64ad-92b3-40f2-945d-50b1d0715da9.png)
+![image](https://user-images.githubusercontent.com/37104267/183224685-cc57c779-223d-4a3c-ba1f-76798c320056.png)
+
+Good Luck :)
