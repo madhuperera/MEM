@@ -19,15 +19,16 @@ For this Example, these are the Variables and Files we are using:
 - Printer Name: Canon imageRUNNER (Sonitlo Managed)
 
 ### Getting the Driver ZIP File Ready
-You can download the latest PCL 6 Drivers for a supported Printer from Manufacturer's Website. In this example, we will use *Canon imageRUNNER ADVANCE C5560i* Multifunction Copier. We will download the installer for *Generic Plus PCL6 Printer Driver* from Canon Website and extract the content of "Driver" folder. These are the only files you need for this installation.
+You can download the latest PCL 6 Drivers for a supported Printer from Manufacturer's Website. In this example, we will use *Canon imageRUNNER ADVANCE C5560i* Multifunction Copier. We will download the installer for *Generic Plus PCL6 Printer Driver* from Canon Website and extract the "Driver" folder. These are the only files you need for this installation.
 ![image](https://user-images.githubusercontent.com/37104267/183159903-de5e81b1-b8ec-4101-89a2-97bb5d2ddf5a.png)
 
 You will also need to include the name of the file which contains the setup information. Ex: CNP60MA64.INF
 ![image](https://user-images.githubusercontent.com/37104267/183214694-5d037919-b93a-4f71-a211-dfc7190ef233.png)
 
 
-Now zip the content of this folder to "Driver.ZIP".
-![image](https://user-images.githubusercontent.com/37104267/183213315-a3622fe6-e34b-4973-acaa-a26020ee2743.png)
+Now zip the Driver Folder to "Driver.ZIP".
+![image](https://user-images.githubusercontent.com/37104267/183221794-ddf157b3-7db7-4342-b009-7b6c1fb5cd49.png)
+![image](https://user-images.githubusercontent.com/37104267/183221808-c42038cb-f8ef-4b28-84e1-948185b59841.png)
 
 ### Update Deployment Script with correct values for Variables
 Now updates the MEM Variable section with the correct values.
