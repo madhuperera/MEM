@@ -2,8 +2,8 @@
 You can use the two scripts here to find ways to install Drivers and Printers to your Windows 10 and 11 Devices using Microsoft Endpoint Manager. 
 
 ## Components
-- Detection Script
-- Deployment Script
+- [Detection Script](https://github.com/madhuperera/MEM/blob/main/Intune32_Apps/Install_Printer/Detect_Printer.ps1 "Detection Script")
+- [Deployment Script](https://github.com/madhuperera/MEM/blob/main/Intune32_Apps/Install_Printer/Deploy_Printer.ps1 "Deployment Script")
 - PCL 6 Printer Drivers
 - Intune Win32 App
 
