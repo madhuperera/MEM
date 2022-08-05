@@ -18,6 +18,15 @@ For this Example, these are the Variables and Files we are using:
 - Printer Port Name: 192.168.1.150
 - Printer Name: Canon imageRUNNER (Sonitlo Managed)
 
-### Getting the Driver File Ready
-You can download the latest PCL 6 Drivers for a supported Printer from Manufacturer's Website. In this example, we will use *Canon imageRUNNER ADVANCE C5560i* Multifunction Copier. We will download the installer for *Generic Plus PCL6 Printer Driver* from Canon Website.
+### Getting the Driver ZIP File Ready
+You can download the latest PCL 6 Drivers for a supported Printer from Manufacturer's Website. In this example, we will use *Canon imageRUNNER ADVANCE C5560i* Multifunction Copier. We will download the installer for *Generic Plus PCL6 Printer Driver* from Canon Website and extract the content of "Driver" folder. These are the only files you need for this installation.
 ![image](https://user-images.githubusercontent.com/37104267/183159903-de5e81b1-b8ec-4101-89a2-97bb5d2ddf5a.png)
+
+You will also need to include the name of the file which contains the setup information. Ex: CNP60MA64.inf
+![image](https://user-images.githubusercontent.com/37104267/183214694-5d037919-b93a-4f71-a211-dfc7190ef233.png)
+
+
+Now zip the content of this folder to "Driver.ZIP".
+![image](https://user-images.githubusercontent.com/37104267/183213315-a3622fe6-e34b-4973-acaa-a26020ee2743.png)
+
+### Update Deployment Script with correct values for Variables
