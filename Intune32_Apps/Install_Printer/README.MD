@@ -22,7 +22,7 @@ For this Example, these are the Variables and Files we are using:
 You can download the latest PCL 6 Drivers for a supported Printer from Manufacturer's Website. In this example, we will use *Canon imageRUNNER ADVANCE C5560i* Multifunction Copier. We will download the installer for *Generic Plus PCL6 Printer Driver* from Canon Website and extract the content of "Driver" folder. These are the only files you need for this installation.
 ![image](https://user-images.githubusercontent.com/37104267/183159903-de5e81b1-b8ec-4101-89a2-97bb5d2ddf5a.png)
 
-You will also need to include the name of the file which contains the setup information. Ex: CNP60MA64.inf
+You will also need to include the name of the file which contains the setup information. Ex: CNP60MA64.INF
 ![image](https://user-images.githubusercontent.com/37104267/183214694-5d037919-b93a-4f71-a211-dfc7190ef233.png)
 
 
@@ -30,3 +30,14 @@ Now zip the content of this folder to "Driver.ZIP".
 ![image](https://user-images.githubusercontent.com/37104267/183213315-a3622fe6-e34b-4973-acaa-a26020ee2743.png)
 
 ### Update Deployment Script with correct values for Variables
+Now updates the MEM Variable section with the correct values.
+![image](https://user-images.githubusercontent.com/37104267/183215167-79dda25a-531b-4497-9b94-448b8f32df6f.png)
+
+### Prepare the Windows Win32 App for Deployment
+Copy the Driver.ZIP file and Deploy_Printer.ps1 to the same folder and run IntuneWinAppUtil.exe to create the Windows Win32 Intune App.
+![image](https://user-images.githubusercontent.com/37104267/183216515-a8640c1c-7805-4b4a-a9d5-d515b3fe84f6.png)
+![image](https://user-images.githubusercontent.com/37104267/183216977-76444104-7d6a-45aa-bcb4-8339b2243616.png)
+
+### Update Detection Script with correct values for Variables
+Now update the MEM Variable section with the same values you used for Deployment Script.
+![image](https://user-images.githubusercontent.com/37104267/183216929-87c8ee8e-41a7-4528-b124-8ab6815430de.png)
