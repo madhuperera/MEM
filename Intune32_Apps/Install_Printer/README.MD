@@ -41,3 +41,17 @@ Copy the Driver.ZIP file and Deploy_Printer.ps1 to the same folder and run Intun
 ### Update Detection Script with correct values for Variables
 Now update the MEM Variable section with the same values you used for Deployment Script.
 ![image](https://user-images.githubusercontent.com/37104267/183216929-87c8ee8e-41a7-4528-b124-8ab6815430de.png)
+
+## Deploy the Printer on Microsoft Endpoint Manager
+Now deploy this as any other Intune Win32 App from Microsoft Endpoint Manager Portal.
+![image](https://user-images.githubusercontent.com/37104267/183217466-690c3421-1fc0-4a81-87f9-bba7a24eb64a.png)
+
+Install Command would be:
+powershell.exe -ExecutionPolicy bypass -file Deploy_Printer.ps1
+![image](https://user-images.githubusercontent.com/37104267/183217577-34d52de6-5055-4154-9d20-f68169d0a699.png)
+Currently I do not have a Script to uninstalling the printer, so you can have anything in the "Uninstall" command field. I could look into coming up with an uninstallation script in the future if necessary.
+
+Choose the option to use a custom detection script and upload "Detect_Printer.ps1" file.
+![image](https://user-images.githubusercontent.com/37104267/183217761-b54008b5-58ed-4f1a-ac2a-49b8650354b3.png)
+
+
