@@ -1,15 +1,35 @@
+function Update-OutputOnExit
+{
+    param
+    (
+        [bool] $F_ExitCode,
+        [String] $F_Message
+    )
+    
+    Write-Host "STATUS=$F_Message" -ErrorAction SilentlyContinue
+
+    if ($F_ExitCode)
+    {
+        exit 1
+    }
+    else
+    {
+        exit 0
+    }
+}
+
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
 
-$Win32App_Name = "Microsoft Visual C++ 2015 x64 Minimum Runtime - 14.0.24215"
+$Win32App_Name = "Microsoft Visual C++ 201* x64 Minimum Runtime - *"
 
-if (Get-WmiObject -Class Win32_Product -Filter "Name = `'$($Win32App_Name)`'" -ErrorAction SilentlyContinue)
+if (Get-WmiObject -Class Win32_Product -ErrorAction SilentlyContinue | Where-Object {$_.Name -like "$($Win32App_Name)"})
 {
     Write-Output "$Win32App_Name is already installed"
-    exit $ExitWithNoError
+    Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
 }
 else
 {
     Write-Output "$Win32App_Name is not installed"
-    exit $ExitWithError
+    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
 }
