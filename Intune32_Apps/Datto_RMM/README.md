@@ -1,0 +1,22 @@
+# Datto RMM Detection Script
+
+This PowerShell script checks if the Datto RMM app is installed on a device. 
+
+## Usage
+
+To use this script, run the following command in PowerShell: 
+```powershell
+.\DattoRMMServiceDetection.ps1
+```
+
+## Output
+
+The script will output one of the following messages:
+
+- "Datto Service is already running" if the Datto RMM app is installed and running on the device
+- "Datto Service is Not Running" if the Datto RMM app is not installed or not running on the device
+
+Additionally, the script will return a exit code of `0` if the Datto RMM app is running, and a exit code of `1` if the Datto RMM app is not running. This can be useful for use in automation tasks.
+
+## Note
+This script is intended to be used with Microsoft Intune Win32 App.
