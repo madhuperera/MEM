@@ -29,7 +29,7 @@ function Update-RegistryKey
     {
         try
         {
-            New-ItemProperty -Path "$Reg_Key_Parent_Path\$Reg_Key_Name" -Name $Reg_Key_Value_Name -PropertyType String -Value $Reg_Key_Value_Data -Force
+            New-ItemProperty -Path "$Reg_Key_Parent_Path\$Reg_Key_Name" -Name $Reg_Key_Value_Name -PropertyType $SReg_Key_Value_Type -Value $Reg_Key_Value_Data -Force
         }
         catch
         {
