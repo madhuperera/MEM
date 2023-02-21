@@ -43,11 +43,21 @@ function Get-PackageProviderStatus
     }
 }
 
-if ((!(Get-PackageProviderStatus -F_PackageProviderName $SPS_PackagerProviderName)) -or (!(Get-Module -ListAvailable | Where-Object {($_.Name -eq $SPS_ModuleName)})))
+if (!(Get-PackageProviderStatus -F_PackageProviderName $SPS_PackagerProviderName))
 {
-    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED" 
+    Install-PackageProvider -Name $SPS_PackagerProviderName -Scope $SPS_InstallScope -Force
+}
+
+if (!(Get-Module -ListAvailable | Where-Object {($_.Name -eq $SPS_ModuleName)}))
+{
+    Install-Module -Name $SPS_ModuleName -Scope $SPS_InstallScope -Force
+}
+
+if ((Get-PackageProviderStatus -F_PackageProviderName $SPS_PackagerProviderName) -and (Get-Module -ListAvailable | Where-Object {($_.Name -eq $SPS_ModuleName)}))
+{
+    Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
 }
 else
 {
-    Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED" 
 }
