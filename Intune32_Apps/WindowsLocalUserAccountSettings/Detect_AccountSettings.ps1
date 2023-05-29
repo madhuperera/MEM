@@ -25,7 +25,7 @@ function Update-OutputOnExit
 $UserAccount = Get-LocalUser $SAccountName -ErrorAction SilentlyContinue
 if ($UserAccount)
 {
-    if (!$UserAccount.UserMayChangePassword)
+    if ($UserAccount.UserMayChangePassword)
     {
         Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
     }
