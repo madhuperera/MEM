@@ -25,13 +25,13 @@ function Update-OutputOnExit
 $UserAccount = Get-LocalUser $SAccountName -ErrorAction SilentlyContinue
 if ($UserAccount)
 {
-    if ($UserAccount.UserMayChangePassword)
+    if (Get-LocalGroupMember -Group "Administrators" -Member "*\$SAccountName" -ErrorAction SilentlyContinue)
     {
-        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
+        Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
     }
     else
     {
-        Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
     }
 }
 else
