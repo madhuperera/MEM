@@ -25,7 +25,7 @@ function Update-OutputOnExit
 $UserAccount = Get-LocalUser $SAccountName -ErrorAction SilentlyContinue
 if ($UserAccount)
 {
-    if (Get-LocalGroupMember -Group "Administrators" -Member "*\$SAccountName" -ErrorAction SilentlyContinue)
+    if (Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue | Where-Object {$_.Name -like "*\$SAccountName" } )
     {
         Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
     }
