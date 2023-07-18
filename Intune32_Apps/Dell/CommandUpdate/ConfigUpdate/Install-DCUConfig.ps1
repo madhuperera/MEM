@@ -61,8 +61,9 @@ function Update-OutputOnExit
 }
 
 
-$Results = ."C:\Program Files\Dell\CommandUpdate\dcu-cli.exe" /configure -importSettings=".\Settings.xml"
-if ($Results | Where-Object {$_ -like "*The program exited with return code: 0*"})
+."C:\Program Files\Dell\CommandUpdate\dcu-cli.exe" /configure -importSettings=".\Settings.xml" -outputLog=".\RunningDellLog.log"
+$LogFileContent = Get-Content -Path ".\RunningDellLog.log" -ErrorAction SilentlyContinue
+if ($LogFileContent | Where-Object {$_ -like "*The program exited with return code: 0*"})
 {
     if (Update-RegistryKey -Reg_Key_Parent_Path $SReg_Key_Parent_Path -Reg_Key_Name $SReg_Key_Name -Reg_Key_Value_Name $SReg_Key_Value_Name -Reg_Key_Value_Data $SReg_Key_Value_Data -Reg_Key_Value_Type $SReg_Key_Value_Type)
     {
