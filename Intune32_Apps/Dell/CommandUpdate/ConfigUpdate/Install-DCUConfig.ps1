@@ -3,7 +3,7 @@ param
         [String] $SReg_Key_Parent_Path = "HKLM:\SOFTWARE\IntuneManagedApps",
         [String] $SReg_Key_Name = "DellCommandConfig",
         [String] $SReg_Key_Value_Name = "Version",
-        [String] $SReg_Key_Value_Data = "2023.07.11",
+        [String] $SReg_Key_Value_Data = "2023.07.18",
         [ValidateSet("String","ExpandString","Binary","DWord","MultiString","Qword")] $SReg_Key_Value_Type = "String"
     )
 
