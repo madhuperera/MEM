@@ -3,7 +3,7 @@ param
         [String] $SReg_Key_Parent_Path = "HKLM:\SOFTWARE\IntuneManagedApps",
         [String] $SReg_Key_Name = "DellCommandConfig",
         [String] $SReg_Key_Value_Name = "Version",
-        [String] $SReg_Key_Value_Data = "2023.07.18",
+        [String] $SReg_Key_Value_Data = "2023.07.19",
         [ValidateSet("String","ExpandString","Binary","DWord","MultiString","Qword")] $SReg_Key_Value_Type = "String"
     )
 
@@ -60,10 +60,12 @@ function Update-OutputOnExit
     }
 }
 
+$DCUCLIPath = "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe"
+$ConfigName = "Settings.xml"
+$LogFileName = "RunningDellLog.log"
 
-."C:\Program Files\Dell\CommandUpdate\dcu-cli.exe" /configure -importSettings=".\Settings.xml" -outputLog=".\RunningDellLog.log"
-$LogFileContent = Get-Content -Path ".\RunningDellLog.log" -ErrorAction SilentlyContinue
-if ($LogFileContent | Where-Object {$_ -like "*The program exited with return code: 0*"})
+& $DCUCLIPath /configure -importSettings=".\$ConfigName" -outputLog=".\$LogFileName"
+if ($LASTEXITCODE -eq 0)
 {
     if (Update-RegistryKey -Reg_Key_Parent_Path $SReg_Key_Parent_Path -Reg_Key_Name $SReg_Key_Name -Reg_Key_Value_Name $SReg_Key_Value_Name -Reg_Key_Value_Data $SReg_Key_Value_Data -Reg_Key_Value_Type $SReg_Key_Value_Type)
     {
