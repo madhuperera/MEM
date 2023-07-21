@@ -1,3 +1,13 @@
+If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
+    Try {
+        &"$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -File $PSCOMMANDPATH
+    }
+    Catch {
+        Throw "Failed to start $PSCOMMANDPATH"
+    }
+    Exit
+}
+
 param
     (
         [String] $SReg_Key_Parent_Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Advanced Threat Protection",
@@ -29,7 +39,7 @@ function Update-RegistryKey
     {
         try
         {
-            New-ItemProperty -Path "$Reg_Key_Parent_Path\$Reg_Key_Name" -Name $Reg_Key_Value_Name -PropertyType $SReg_Key_Value_Type -Value $Reg_Key_Value_Data -Force
+            New-ItemProperty -Path "$Reg_Key_Parent_Path\$Reg_Key_Name" -Name $Reg_Key_Value_Name -PropertyType $Reg_Key_Value_Type -Value $Reg_Key_Value_Data -Force
         }
         catch
         {
