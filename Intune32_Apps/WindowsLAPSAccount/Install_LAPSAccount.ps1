@@ -1,3 +1,13 @@
+If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
+    Try {
+        &"$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -File $PSCOMMANDPATH
+    }
+    Catch {
+        Throw "Failed to start $PSCOMMANDPATH"
+    }
+    Exit
+}
+
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
 
@@ -35,38 +45,41 @@ function Get-RandomPassword
 {
     param
     (
-        [int] $F_MaxCharLength,
-        [String] $F_AllowedChars
+        [int] $F_MaxCharLength
     )
 
-    [String] $F_AllowedPassLetters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    [String] $F_AllowedPassNumbers = "0123456789"
-    [String] $F_AllowedPassAlphaN = "!@#$%^&*()_+=-"
     [String] $F_RandomPassword = ""
-    $F_RandomObjLetters = New-Object -TypeName System.Random -ErrorAction SilentlyContinue
-    $F_RandomObjNumbers = New-Object -TypeName System.Random -ErrorAction SilentlyContinue
-    $F_RandomObjAlphaN = New-Object -TypeName System.Random -ErrorAction SilentlyContinue
 
-    if ($F_MaxCharLength%3 -gt 0)
+    # Ensure at least one third of the length for each type of character
+    $MinNumNumbers = [math]::Ceiling($F_MaxCharLength / 3)
+    $MinNumUpperCase = [math]::Ceiling($F_MaxCharLength / 3)
+    $MinNumLowerCase = $F_MaxCharLength - $MinNumNumbers - $MinNumUpperCase
+
+    # Initialize arrays to store characters for each category
+    $RandomNumbers = @()
+    $RandomUpperCase = @()
+    $RandomLowerCase = @()
+
+    for ($i = 1; $i -le $MinNumNumbers; $i++)
     {
-        for ($i = 0; $i -lt $F_MaxCharLength%3; $i++)
-        {
-            $IndexL = $F_RandomObjLetters.Next(0, $F_AllowedPassLetters.Length)
-            $F_RandomPassword += $F_AllowedPassLetters[$IndexL]
-        }
+        $RandomNumbers += Get-Random -Minimum 0 -Maximum 9
     }
-
-    for ($i = 0 ; $i -lt [Math]::Floor($F_MaxCharLength/3); $i++)
-    {
-        $IndexL = $F_RandomObjLetters.Next(0, $F_AllowedPassLetters.Length)
-        $IndexN = $F_RandomObjNumbers.Next(0, $F_AllowedPassNumbers.Length)
-        $IndexA = $F_RandomObjAlphaN.Next(0, $F_AllowedPassAlphaN.Length)
-        $F_RandomPassword += $F_AllowedPassLetters[$IndexL]
-        $F_RandomPassword += $F_AllowedPassNumbers[$IndexN]
-        $F_RandomPassword += $F_AllowedPassAlphaN[$IndexA]
-    }
-
     
+    # Generate random uppercase letters
+    for ($i = 1; $i -le $MinNumUpperCase; $i++)
+    {
+        $RandomUpperCase += [char](Get-Random -Minimum 65 -Maximum 91)
+    }
+    
+    # Generate random lowercase letters
+    for ($i = 1; $i -le $MinNumLowerCase; $i++)
+    {
+        $RandomLowerCase += [char](Get-Random -Minimum 97 -Maximum 123)
+    }
+
+    $CombinedChars = $RandomNumbers + $RandomUpperCase + $RandomLowerCase | Get-Random -Count $F_MaxCharLength
+    $F_RandomPassword = $CombinedChars -join ''
+
     return $F_RandomPassword
 }
 
