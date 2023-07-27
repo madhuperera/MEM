@@ -1,3 +1,12 @@
+param
+(
+    [String] $SAccountName = "LocalAccountName",
+    [String] $SAccountFullName = "LAPS Managed Local Admin",
+    [String] $SAccountDesc = "LAPS Managed Local Administrator Account",
+    [int] $SAccountPassLength = 14
+)
+
+
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Try {
         &"$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -File $PSCOMMANDPATH
@@ -10,16 +19,6 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
-
-# Account Details
-[String] $SAccountName = "LocalAccountName" # Please change
-[String] $SAccountFullName = "LAPS Managed Local Admin" # Please change
-[String] $SAccountDesc = "LAPS Managed Local Administrator Account" # Please change
-
-# Password Requirements and Details
-[int] $SAccountPassLength = 14
-
-
 
 function Update-OutputOnExit
 {

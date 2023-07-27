@@ -1,6 +1,20 @@
+param
+(
+    [String] $SAccountName = "LocalAccountName"
+)
+
+If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
+    Try {
+        &"$ENV:WINDIR\SysNative\WindowsPowershell\v1.0\PowerShell.exe" -File $PSCOMMANDPATH
+    }
+    Catch {
+        Throw "Failed to start $PSCOMMANDPATH"
+    }
+    Exit
+}
+
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
-[String] $SAccountName = "LocalAccountName" # Please change
 
 function Update-OutputOnExit
 {
