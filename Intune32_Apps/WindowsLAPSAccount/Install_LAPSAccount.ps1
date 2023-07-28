@@ -3,7 +3,9 @@ param
     [String] $SAccountName = "LocalAccountName",
     [String] $SAccountFullName = "LAPS Managed Local Admin",
     [String] $SAccountDesc = "LAPS Managed Local Administrator Account",
-    [int] $SAccountPassLength = 14
+    [int] $SAccountPassLength = 14,
+    [String] $S_CompanyName = "Sonitlo",
+    [String] $S_ScriptName = "LAPS"
 )
 
 
@@ -17,8 +19,24 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Exit
 }
 
+
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
+
+function Start-ScriptLogs
+{
+    param
+    (
+        [String] $F_CompanyName,
+        [String] $F_ScriptName,
+        [String] $F_LogDirectory = "C:\ProgramData\$($CompanyName)IntuneManaged\Logs\$ScriptName",
+        [String] $F_LogName = "Logs.txt",
+        [String] $F_LogPath = "$LogDirectory\$LogName"
+    )
+    
+    Start-Transcript -Path $F_LogPath -Force -Append
+}
+Start-ScriptLogs -F_CompanyName $S_CompanyName -F_ScriptName $S_ScriptName
 
 function Update-OutputOnExit
 {
@@ -32,10 +50,12 @@ function Update-OutputOnExit
 
     if ($F_ExitCode)
     {
+        Stop-Transcript
         exit 1
     }
     else
     {
+        Stop-Transcript
         exit 0
     }
 }
@@ -82,31 +102,102 @@ function Get-RandomPassword
     return $F_RandomPassword
 }
 
+function Test-LAPSUserGroup
+{
+    param 
+    (
+        [string] $F_UserName,
+        [String] $F_GroupName = "Administrators"
+    )
+
+    try
+    {
+        # Try the Modern PS Cmdlet
+        $LMembers = Get-LocalGroupMember -Group $F_GroupName -ErrorAction Stop | Where-Object {$_.Name -like "*\$F_UserName" } 
+    }
+    catch
+    {
+        # Reverting to Dos Command to get the Local Group Members
+        $LMembers = net localgroup $F_GroupName
+        $LMembers = $LMembers | Select-Object -Skip 6
+        $LMembers = $LMembers | Where-Object {$_ -like "*$F_UserName*"}
+    }
+
+    if ($LMembers)
+    {
+        return $true
+    }
+    else 
+    {
+        return $false
+    }
+
+}
+
+function Add-LAPSUserToGroup
+{
+    param 
+    (
+        [string] $F_UserName,
+        [string] $F_GroupName = "Administrators"
+    )
+
+    try
+    {
+        # Try the Modern PS Cmdlet
+        Add-LocalGroupMember -Group $F_GroupName -Member $F_UserName -ErrorAction Stop   
+    }
+    catch
+    {
+        # Reverting to Dos Command
+        net locagroup $F_GroupName $F_UserName /add
+    }
+}
+
 $UserAccount = Get-LocalUser $SAccountName -ErrorAction SilentlyContinue
 if ($UserAccount)
 {
-    if (Get-LocalGroupMember -Group "Administrators" -Member "*\$SAccountName" -ErrorAction SilentlyContinue)
+    if (Test-LAPSUserGroup -F_UserName $UserAccount)
     {
         Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
     }
     else
     {
-        Add-LocalGroupMember -Group "Administrators" -Member $SAccountName -ErrorAction SilentlyContinue
-        Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+        Add-LAPSUserToGroup -F_GroupName "Administrators" -F_UserName $SAccountName
+
+        if (Test-LAPSUserGroup -F_UserName $UserAccount)
+        {
+            Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+        }
+        else
+        {
+            Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "ERROR"
+        }        
     }
 }
 else
 {
+    [String] $RandomPassword = Get-RandomPassword -F_MaxCharLength $SAccountPassLength
+
     try
     {
+        # Try Modern PS Cmdlet
         New-LocalUser -Name $SAccountName -Description $SAccountDesc -FullName $SAccountFullName `
-        -Password (ConvertTo-SecureString -String (Get-RandomPassword -F_MaxCharLength $SAccountPassLength) -Force -AsPlainText -ErrorAction SilentlyContinue)
-    
-        Add-LocalGroupMember -Group "Administrators" -Member $SAccountName -ErrorAction SilentlyContinue
+        -Password (ConvertTo-SecureString -String $RandomPassword -Force -AsPlainText -ErrorAction Stop)
     }
     catch
     {
-        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
+        # Revertto using old cmdlet
+        net user $SAccountName $RandomPassword /add
     }
-    Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+    Add-LAPSUserToGroup -F_UserName $SAccountName -F_GroupName "Administrators"
+
+    if (Test-LAPSUserGroup -F_UserName $UserAccount)
+    {
+        Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+    }
+    else
+    {
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "ERROR"
+    }
 }
