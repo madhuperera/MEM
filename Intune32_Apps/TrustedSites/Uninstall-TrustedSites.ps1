@@ -5,10 +5,7 @@ param
     [bool] $ExitWithError = $true,
     [bool] $ExitWithNoError = $false,
     [String] $SReg_Key_Parent_Path = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ZoneMap\Domains",
-    [String] $SReg_Key_Name = "yourtrustedsite.com",
-    [String] $SReg_Key_Value_Name = "https",
-    [String] $SReg_Key_Value_Data = 2,
-    [ValidateSet("String", "ExpandString", "Binary", "DWord", "MultiString", "Qword")] $SReg_Key_Value_Type = "DWord"
+    [String] $SReg_Key_Name = "yourtrustedsite.com"
 )
 
 If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64")
@@ -31,7 +28,7 @@ function Start-ScriptLogs
         [String] $F_CompanyName,
         [String] $F_ScriptName,
         [String] $F_LogDirectory = "C:\ProgramData\$($F_CompanyName)IntuneManaged\Logs\$F_ScriptName",
-        [String] $F_LogName = "InstallLogs.txt",
+        [String] $F_LogName = "UninstallLogs.txt",
         [String] $F_LogPath = "$F_LogDirectory\$F_LogName"
     )
     
@@ -62,38 +59,33 @@ function Update-OutputOnExit
     }
 }
 
-function Update-RegistryKey
+function Remove-RegistryKey
 {
     param
     (
         [String] $F_Reg_Key_Parent_Path,
-        [String] $F_Reg_Key_Name,
-        [String] $F_Reg_Key_Value_Name,
-        [String] $F_Reg_Key_Value_Data,
-        [ValidateSet("String", "ExpandString", "Binary", "DWord", "MultiString", "Qword")] $F_Reg_Key_Value_Type
+        [String] $F_Reg_Key_Name
     )
 
     if (!(Test-Path -Path "$F_Reg_Key_Parent_Path\$F_Reg_Key_Name" -PathType Container))
     {
-        New-Item -Path $F_Reg_Key_Parent_Path -Name $F_Reg_Key_Name -ItemType Conatiner -Force -Verbose | Out-Null
+        return $true
     }
-
-    if ($F_Reg_Key_Value_Data -and $F_Reg_Key_Value_Name)
+    else
     {
         try
         {
-            New-ItemProperty -Path "$F_Reg_Key_Parent_Path\$F_Reg_Key_Name" -Name $F_Reg_Key_Value_Name -PropertyType $F_Reg_Key_Value_Type -Value $F_Reg_Key_Value_Data -Force -Verbose | Out-Null
+            Remove-Item -Path "$F_Reg_Key_Parent_Path\$F_Reg_Key_Name" -Recurse -Force -ErrorAction Stop
         }
         catch
         {
             return $false
         }
-        
+        return $true
     }
-    return $true
 }
 
-if (Update-RegistryKey -F_Reg_Key_Parent_Path $SReg_Key_Parent_Path -F_Reg_Key_Name $SReg_Key_Name -F_Reg_Key_Value_Name $SReg_Key_Value_Name -F_Reg_Key_Value_Data $SReg_Key_Value_Data -F_Reg_Key_Value_Type $SReg_Key_Value_Type)
+if (Remove-RegistryKey -F_Reg_Key_Parent_Path $SReg_Key_Parent_Path -F_Reg_Key_Name $SReg_Key_Name)
 {
     Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
 }
