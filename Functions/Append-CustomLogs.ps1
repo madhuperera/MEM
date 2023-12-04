@@ -10,9 +10,9 @@ function Update-CustomLogs
         [String] $F_CompanyName,
         [String] $F_ScriptName,
         [String] $F_Message,        
-        [String] $F_LogDirectory = "C:\ProgramData\$($CompanyName)IntuneManaged\Logs\$ScriptName",
+        [String] $F_LogDirectory = "C:\ProgramData\$($F_CompanyName)IntuneManaged\Logs\$F_ScriptName",
         [String] $F_CustomLogName = "CustomLogs.txt",
-        [String] $F_CustomLogPath = "$LogDirectory\$CustomLogName"
+        [String] $F_CustomLogPath = "$F_LogDirectory\$F_CustomLogName"
     )
     
     [String] $TimeStamp = Get-Date -Format "yyyy-MM-dd-HH:mm:ss__"
