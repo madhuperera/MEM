@@ -57,10 +57,15 @@ function IsTrendMicroRunning
 }
 
 [int] $TotalSleepTime = 0
-while (IsTrendMicroRunning -and $TotalSleepTime -lt 3600 )
+[int] $TotalSleepTimeLimit = 3600
+while (IsTrendMicroRunning)
 {
     Start-Sleep -Seconds 60
     $TotalSleepTime += 60
+    if ($TotalSleepTime -gt $TotalSleepTimeLimit)
+    {
+        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
+    }
 }
 
 if (IsTrendMicroRunning)
