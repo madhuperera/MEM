@@ -8,13 +8,11 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
     Exit
 }
 
+
 [String] $SReg_Key_Path = "HKLM:\SOFTWARE\Policies\Microsoft\Windows Advanced Threat Protection\DeviceTagging"
 [String] $SReg_Key_Value_Name = "Group"
-[String] $SReg_Key_Value_Data = "New_Zealand"
-[ValidateSet("String","ExpandString","Binary","DWord","MultiString","Qword")] $SReg_Key_Value_Type = "String"
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
-
 function Update-OutputOnExit
 {
     param
@@ -55,9 +53,22 @@ Function Get-KeyValueData
     }
     return $false
 }
+Function Remove-KeyValueName
+{
+    param
+    (
+        [string]$F_Reg_Key_Path,
+        [string]$F_Reg_Key_Value_Name
+    )
+    if (Test-Path $F_Reg_Key_Path)
+    {
+        Remove-ItemProperty -Path $F_Reg_Key_Path -Name $F_Reg_Key_Value_Name
+    }
+}
 
+Remove-KeyValueName -F_Reg_Key_Path $SReg_Key_Path -F_Reg_Key_Value_Name $SReg_Key_Value_Name
 
-if (Get-KeyValueData -F_Reg_Key_Path $SReg_Key_Path -F_Reg_Key_Value_Name $SReg_Key_Value_Name -F_Reg_Key_Value_Data $SReg_Key_Value_Data)
+if (!(Get-KeyValueData -F_Reg_Key_Path $SReg_Key_Path -F_Reg_Key_Value_Name $SReg_Key_Value_Name -F_Reg_Key_Value_Data $SReg_Key_Value_Data))
 {
     Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
 }
