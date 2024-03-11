@@ -44,7 +44,7 @@ Start-ScriptLogs -F_CompanyName $S_CompanyName -F_ScriptName $S_ScriptName
 
 function IsTrendMicroRunning
 {
-   if (Get-Service | Where-Object {$_.DisplayName -like "Trend Micro*" -or $_.DisplayName -like "Worry-Free Business*"} -ErrorAction SilentlyContinue)
+   if (Get-Service | Where-Object {($_.DisplayName -like "Trend Micro*" -and $_.DisplayName -ne "Trend Micro Cloud Endpoint Telemetry Service") -or $_.DisplayName -like "Worry-Free Business*" -or $_.DisplayName -like "Apex One*"} -ErrorAction SilentlyContinue)
    {
         return $true
    }
