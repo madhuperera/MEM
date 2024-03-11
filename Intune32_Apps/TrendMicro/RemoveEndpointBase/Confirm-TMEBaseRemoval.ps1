@@ -1,7 +1,7 @@
 param
 (
     [String] $S_CompanyName = "Sonitlo",
-    [String] $S_ScriptName = "TMWFBS_Detect"
+    [String] $S_ScriptName = "TMEBase_Detect"
 )
 
 [bool] $ExitWithError = $true
@@ -44,7 +44,7 @@ Start-ScriptLogs -F_CompanyName $S_CompanyName -F_ScriptName $S_ScriptName
 
 function IsTrendMicroRunning
 {
-   if (Get-Service | Where-Object {($_.DisplayName -like "Trend Micro*" -and $_.DisplayName -ne "Trend Micro Cloud Endpoint Telemetry Service" -and $_.DisplayName -ne "Trend Micro Endpoint Basecamp" -and $_.DisplayName -ne "Trend Micro Web Service Communicator") -or $_.DisplayName -like "Worry-Free Business*" -or $_.DisplayName -like "Apex One*"} -ErrorAction SilentlyContinue)
+   if (Get-Service | Where-Object {($_.DisplayName -like "Trend Micro*" -and $_.DisplayName -ne "Trend Micro Cloud Endpoint Telemetry Service") -or $_.DisplayName -like "Worry-Free Business*" -or $_.DisplayName -like "Apex One*"} -ErrorAction SilentlyContinue)
    {
         return $true
    }
