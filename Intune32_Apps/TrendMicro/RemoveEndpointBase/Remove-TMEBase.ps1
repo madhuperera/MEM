@@ -42,10 +42,12 @@ function Start-ScriptLogs
 Start-ScriptLogs -F_CompanyName $S_CompanyName -F_ScriptName $S_ScriptName
 
 # Initiating the Uninstall
-& XBCUninstaller.exe XBCUninstallToken.txt
+# XBCUninstaller.exe XBCUninstallToken.txt
+Start-Process -FilePath 'XBCUninstaller.exe' -ArgumentList 'XBCUninstallToken.txt' -Verb RunAs
+
 function IsTrendMicroRunning
 {
-   if (Get-Service | Where-Object {$_.DisplayName -ne "Trend Micro Cloud Endpoint Telemetry Service" -and $_.DisplayName -ne "Trend Micro Endpoint Basecamp" -and $_.DisplayName -ne "Trend Micro Web Service Communicator"} -ErrorAction SilentlyContinue)
+   if (Get-Service | Where-Object {$_.DisplayName -eq "Trend Micro Cloud Endpoint Telemetry Service" -or $_.DisplayName -eq "Trend Micro Endpoint Basecamp" -or $_.DisplayName -eq "Trend Micro Web Service Communicator"} -ErrorAction SilentlyContinue)
    {
         return $true
    }
