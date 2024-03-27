@@ -46,14 +46,23 @@ function Test-WingetAppInstalled
         [string] $F_WingetAppId
     )
 
-    if ((winget list $F_WingetAppId) -match $F_WingetAppId)
+    [string] $WingetPInstallerPath = (Resolve-Path "C:\Program Files\WindowsApps\Microsoft.DesktopAppInstaller_*_x64__8wekyb3d8bbwe" -ErrorAction Stop)[-1].Path
+    if ($WingetPInstallerPath)
     {
-        return $true
+        Set-Location -Path $WingetPInstallerPath -ErrorAction Stop
+        if ((.\winget.exe list $F_WingetAppId) -match $F_WingetAppId)
+        {
+            return $true
+        }
+        else
+        {
+            return $false
+        }    
     }
     else
     {
         return $false
-    }
+    }    
 }
 
 if (!(Test-WingetPackageManagerInstalled))
