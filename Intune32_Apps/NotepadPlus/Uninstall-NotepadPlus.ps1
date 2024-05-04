@@ -1,6 +1,6 @@
 # This app is dependent on WINGET Package Manager: https://github.com/madhuperera/MEM/tree/a6bf94109d3f4ff1f537aa1efa9e1b35f6a66fa6/Intune32_Apps/WINGET
 
-[String] $S_WingetAppID = "Notepad++.Notepad++"
+[String] $S_WingetAppID = "Notepad\+\+.Notepad\+\+"
 
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
