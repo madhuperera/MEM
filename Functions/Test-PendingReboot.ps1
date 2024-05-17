@@ -1,26 +1,3 @@
-$params = "/Install /Quiet"
-$media_path = ".\SSMS-Setup-ENU.exe"
-
-function Update-OutputOnExit
-{
-    param
-    (
-        [bool] $F_ExitCode,
-        [String] $F_Message
-    )
-    
-    Write-Host "STATUS=$F_Message" -ErrorAction SilentlyContinue
-
-    if ($F_ExitCode)
-    {
-        exit 1
-    }
-    else
-    {
-        exit 0
-    }
-}
-
 function Test-PendingReboot
 {
     # Check PendingFileRenameOperations
@@ -45,24 +22,4 @@ function Test-PendingReboot
     }
 
     return $false
-}
-
-[bool] $ExitWithError = $true
-[bool] $ExitWithNoError = $false
-
-if (Test-PendingReboot)
-{
-    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED:SYS_PENDING_REBOOT"
-}
-else
-{
-    try
-    {
-        Start-Process -FilePath $media_path -ArgumentList $params -Wait -ErrorAction Stop
-        Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
-    }
-    catch
-    {
-        Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
-    }
 }
