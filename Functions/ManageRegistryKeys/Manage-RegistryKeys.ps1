@@ -50,3 +50,25 @@ Function Remove-KeyValueName
         Remove-ItemProperty -Path $F_Reg_Key_Path -Name $F_Reg_Key_Value_Name
     }
 }
+
+# Scenario 4: Detect Registry Key Versions newer than required
+Function Get-KeyValueData
+{
+    param
+    (
+        [string]$F_Reg_Key_Path,
+        [string]$F_Reg_Key_Value_Name,
+        [string]$F_Reg_Key_Value_Data
+    )
+
+    $key = Get-Item -Path $F_Reg_Key_Path -ErrorAction SilentlyContinue
+    if ($key -ne $null)
+    {
+        $value = $key.GetValue($F_Reg_Key_Value_Name)
+        if ($value -ge $F_Reg_Key_Value_Data)
+        {
+            return $true
+        }
+    }
+    return $false
+}

@@ -1,4 +1,4 @@
-$params = "/Install /Quiet"
+$params = "/Install /norestart /SkipRules=RebootRequiredCheck /Quiet"
 $media_path = ".\SSMS-Setup-ENU.exe"
 
 function Update-OutputOnExit
