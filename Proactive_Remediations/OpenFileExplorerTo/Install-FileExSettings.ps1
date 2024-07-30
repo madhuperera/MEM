@@ -45,9 +45,9 @@ Function Set-KeyValueData
 try
 {
     Set-KeyValueData -F_Reg_Key_Path $SReg_Key_Path -F_Reg_Key_Value_Name $SReg_Key_Value_Name -F_Reg_Key_Value_Data $SReg_Key_Value_Data -$SReg_Key_Value_Type
-    SUCCESS --> Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
+    Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
 }
 catch
 {
-    FAILURE --> Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
+    Update-OutputOnExit -F_ExitCode $ExitWithError -F_Message "FAILED"
 }
