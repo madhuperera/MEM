@@ -13,7 +13,7 @@ function Test-AppInstalled
 
     try 
     {
-        Get-ChildItem -Path $S_RegPath | ForEach-Object 
+        Get-ChildItem -Path $S_RegPath | ForEach-Object `
         {
             $F_DisplayName = (Get-ItemProperty -Path $_.PSPath).DisplayName
             if ($F_DisplayName -like $F_AppName)
@@ -43,7 +43,7 @@ function Get-AppUninstallString
 
     try 
     {
-        Get-ChildItem -Path $S_RegPath | ForEach-Object 
+        Get-ChildItem -Path $S_RegPath | ForEach-Object `
         {
             $F_DisplayName = (Get-ItemProperty -Path $_.PSPath).DisplayName
             if ($F_DisplayName -like $F_AppName)

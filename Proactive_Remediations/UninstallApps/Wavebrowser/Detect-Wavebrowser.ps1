@@ -1,5 +1,5 @@
 # Define the application name as a variable with wildcards
-$S_AppName = "*Avast Secure Browser*"
+$S_AppName = "*Wavebrowser*"
 $S_RegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
 
 # Function to test if the app is installed

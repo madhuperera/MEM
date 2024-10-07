@@ -1,7 +1,7 @@
 # Define the application name as a variable with wildcards
-$S_AppName = "*Avast Secure Browser*"
+$S_AppName = "*WebCompanion*"
 $S_RegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
-$S_ArgsList = "/run_source=cp /S"
+$S_ArgsList = "/S"
 
 # Define the time threshold and increment in seconds
 $S_TimeThreshold = 600  # Maximum wait time of 60 seconds

@@ -1,10 +1,11 @@
 # Define the application name as a variable with wildcards
-$S_AppName = "*7-Zip*"
-$S_RegPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+$S_AppName = "*Wavebrowser*"
+$S_RegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall"
+$S_ArgsList = "/S"
 
 # Define the time threshold and increment in seconds
 $S_TimeThreshold = 600  # Maximum wait time of 60 seconds
-$S_TimeIncrement = 60   # Check every 5 seconds
+$S_TimeIncrement = 30   # Check every 5 seconds
 
 # Function to test if the app is installed
 function Test-AppInstalled
@@ -17,7 +18,7 @@ function Test-AppInstalled
 
     try 
     {
-        Get-ChildItem -Path $S_RegPath | ForEach-Object 
+        Get-ChildItem -Path $S_RegPath | ForEach-Object `
         {
             $F_DisplayName = (Get-ItemProperty -Path $_.PSPath).DisplayName
             if ($F_DisplayName -like $F_AppName)
@@ -46,7 +47,7 @@ function Get-AppUninstallString
 
     try 
     {
-        Get-ChildItem -Path $S_RegPath | ForEach-Object 
+        Get-ChildItem -Path $S_RegPath | ForEach-Object `
         {
             $F_DisplayName = (Get-ItemProperty -Path $_.PSPath).DisplayName
             if ($F_DisplayName -like $F_AppName)  # Using -like for wildcard search
@@ -62,6 +63,27 @@ function Get-AppUninstallString
     }
 
     return $F_UninstallStrings
+}
+
+# Function to extract file path from uninstall string
+function Get-FilePathFromUninstallString
+{
+    param(
+        [string]$F_UninstallString
+    )
+
+    # Use regex to extract the file path from the uninstall string (assumes the path is enclosed in quotes)
+    $F_FilePath = if ($F_UninstallString -match '"([^"]+)"') 
+    {
+        $matches[1]  # Return the first captured group (the file path)
+    }
+    else 
+    {
+        # If no quotes, assume the first part of the string is the executable path
+        $F_UninstallString.Split(" ")[0]
+    }
+
+    return $F_FilePath
 }
 
 # Check if the app is installed
@@ -84,19 +106,22 @@ if ($F_AppInstalled)
         {
             try 
             {
-                Write-Output "Uninstalling using string: $F_UninstallString"
-                Start-Process -FilePath $F_UninstallString -ArgumentList "/uninstall", "/quiet" -Wait
+                # Extract the file path from the uninstall string
+                $F_FilePath = Get-FilePathFromUninstallString -F_UninstallString $F_UninstallString
+                
+                Write-Output "Executing uninstall command: $F_FilePath with /run_source=cp /S for silent uninstall"
+                
+                # Use Start-Process to run the uninstall with added arguments for silent uninstall
+                Start-Process -FilePath $F_FilePath -ArgumentList $S_ArgsList -Wait
             } 
             catch 
             {
                 Write-Output "Error during uninstallation with string '$F_UninstallString': $_"
             }
         }
-        
+
         # Variable to keep track of how much time has passed
         $F_ElapsedTime = 0
-
-        # Initial check to see if the app is still installed after attempting uninstallation
         $F_AppInstalledAfter = Test-AppInstalled -F_AppName $S_AppName
 
         # Check in a loop until the app is uninstalled or the time threshold is reached
@@ -105,23 +130,19 @@ if ($F_AppInstalled)
             Write-Output "Application still installed, waiting for $S_TimeIncrement seconds..."
             Start-Sleep -Seconds $S_TimeIncrement
             $F_ElapsedTime += $S_TimeIncrement
-
-            # Check again if the app is still installed
             $F_AppInstalledAfter = Test-AppInstalled -F_AppName $S_AppName
         }
 
-        # If the app was successfully uninstalled within the threshold
         if (-not $F_AppInstalledAfter) 
         {
             Write-Output "Application successfully uninstalled."
             exit 0  # Success
-        }
+        } 
         else 
         {
             Write-Output "Failed to uninstall the application within the time threshold of $S_TimeThreshold seconds."
             exit 2  # Uninstallation failed
         }
-
     }
     else 
     {
