@@ -5,7 +5,7 @@ This repository contains PowerShell scripts designed for managing scheduled task
 - **Cleanup**: Detects and removes the scheduled tasks for devices not in the targeted group.
 
 ## Folder Structure
-```plaintext
+
 WiFiReporting/
     Readme.md
     Detect-ScheduledTask.ps1
