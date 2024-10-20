@@ -4,17 +4,6 @@ This repository contains PowerShell scripts designed for managing scheduled task
 - **WiFiReporting**: Configures and manages scheduled tasks to gather and analyze Wi-Fi information for a specific group of devices.
 - **Cleanup**: Detects and removes the scheduled tasks for devices not in the targeted group.
 
-## Folder Structure
-
-WiFiReporting/
-    Readme.md
-    Detect-ScheduledTask.ps1
-    Installed-ScheduledTask.ps1
-    WiFi_Analysis_v1.ps1
-Cleanup/
-    Detect-ScheduledTask.ps1
-    Remove-ScheduledTask.ps1
-
 ## WiFiReporting
 
 ### Overview
