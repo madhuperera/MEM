@@ -1,6 +1,5 @@
 param
 (
-    [String] $S_CompanyName = "Sonitlo",
     [String] $S_ScriptName = "TMWFBS_Detect"
 )
 
@@ -32,7 +31,7 @@ function Start-ScriptLogs
     (
         [String] $F_CompanyName,
         [String] $F_ScriptName,
-        [String] $F_LogDirectory = "C:\ProgramData\$($F_CompanyName)IntuneManaged\Logs\$F_ScriptName",
+        [String] $F_LogDirectory = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\$F_ScriptName",
         [String] $F_LogName = "Logs.txt",
         [String] $F_LogPath = "$F_LogDirectory\$F_LogName"
     )
