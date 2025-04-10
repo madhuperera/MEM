@@ -1,12 +1,12 @@
 param
 (
-    [string]$ClientName = "Sonitlo",
+    [string]$ClientName = "Sonitlo", # This will be used for the image name, avoid using spaces
     [string]$S_Reg_Key_Path = "HKLM:\SOFTWARE\$ClientName\IntuneConfigs\Lockscreen\",
     [string]$S_Reg_Key_ValueName = "CurrentLockscreen",
     [string]$S_Reg_Key_ValueData = "", # This will be set to the blob name after download
     [string]$S_Reg_Key_ValueType = "String",
     [string]$ContainerUrl = "https://<your-storage-account>.blob.core.windows.net/<container>/<Folder>?<SAS-token>",
-    [string]$DestinationFilePath = "C:\Windows\Web\Screen\VO_Lockscreen.png"
+    [string]$DestinationFilePath = "C:\Windows\Web\Screen\$($ClientName)_Lockscreen.png"
 )
 function Get-BlobItems
 {

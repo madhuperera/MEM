@@ -1,8 +1,13 @@
+param
+(
+    [string]$ClientName = "Sonitlo"
+)
+
 $S_Reg_Key_ValuePair = @(
     @{
         KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImagePath"
-        ValueData = "C:\Windows\Web\Screen\VO_Lockscreen.png"
+        ValueData = "C:\Windows\Web\Screen\$($ClientName)_Lockscreen.png"
         ValueType = "String"
     },
     @{
