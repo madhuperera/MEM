@@ -1,4 +1,4 @@
-$S_Reg_Key_Path = "HKCU:\Software\Policies\Microsoft\Office\16.0\Excel\Options"
+$S_Reg_Key_Path = "HKCU:\Software\Microsoft\Office\16.0\Excel\Options"
 $S_Reg_Key_Value_Name = "defaultformat"
 $S_Reg_Key_Value_Data = 51 # 51 = Excel Workbook (XLSX)
 $S_Reg_Key_Value_Type = "DWORD"
