@@ -1,14 +1,17 @@
 param
 (
     [string]$ClientName = "Sonitlo",
-    [string]$ImageName = "Sonitlo"
+    [string]$ImageName = "Lockscreen.jpg"
 )
 
-$S_Reg_Key_ValuePair = @(
+$DestinationPath = Join-Path "C:\Windows\Web\Screen" "$($ClientName)_$ImageName"
+
+$S_Reg_Key_ValuePair = 
+@(
     @{
         KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImagePath"
-        ValueData = "C:\Windows\Web\Screen\$($ClientName)_Lockscreen.png"
+        ValueData = $DestinationPath
         ValueType = "String"
     },
     @{
@@ -58,8 +61,39 @@ Function Set-KeyValueData
     New-ItemProperty -Path $F_Reg_Key_Path -Name $F_Reg_Key_Value_Name -Value $F_Reg_Key_Value_Data -PropertyType $F_Reg_Key_Value_Type -Force | Out-Null
 }
 
+
+Function Copy-FileWithErrorHandling
+{
+    param
+    (
+        [string]$SourcePath,
+        [string]$DestinationPath
+    )
+
+    try
+    {
+        if (Test-Path -Path $SourcePath)
+        {
+            Copy-Item -Path $SourcePath -Destination $DestinationPath -Force
+            Write-Output "File copied successfully from $SourcePath to $DestinationPath"
+        }
+        else
+        {
+            Write-Output "Source file does not exist: $SourcePath"
+        }
+    }
+    catch
+    {
+        Write-Output "Error occurred while copying file: $_"
+    }
+}
 function main
 {
+    # Copy the lockscreen image to the target location
+    $SourcePath = Join-Path -Path $PSScriptRoot -ChildPath $ImageName    
+    Copy-FileWithErrorHandling -SourcePath $SourcePath -DestinationPath $DestinationPath
+
+
     foreach ($Key in $S_Reg_Key_ValuePair)
     {
         $RegKeyPath = $Key.KeyPath
@@ -70,7 +104,6 @@ function main
         if (Get-KeyValueData -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -F_Reg_Key_Value_Data $RegKeyValue)
         {
             Write-Host "Registry key value exists: $RegKeyPath\$RegKeyName = $RegKeyValue"
-            exit 0
         }
         else
         {
@@ -78,12 +111,10 @@ function main
             {
                 Set-KeyValueData -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -F_Reg_Key_Value_Data $RegKeyValue -F_Reg_Key_Value_Type $RegKeyType
                 Write-Host "Successfully updated registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
-                exit 0
             }
             catch
             {
                 Write-Host "Failed to set registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
-                exit 1
             }          
             
         }

@@ -1,11 +1,11 @@
 $S_Reg_Key_ValuePair = @(
     @{
         KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
-        ValueName = "LockScreenImagePath"
+        ValueName = "DesktopImagePath"
     },
     @{
         KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
-        ValueName = "LockScreenImageStatus"
+        ValueName = "DesktopImageStatus"
     }
 )
 
