@@ -24,24 +24,31 @@ Function Remove-KeyValueName
 
 function main
 {
+    $allSuccess = $true
     foreach ($Key in $S_Reg_Key_ValuePair)
     {
         $RegKeyPath = $Key.KeyPath
         $RegKeyName = $Key.ValueName
 
-       
         try
         {
             Remove-KeyValueName -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName
-            Write-Host "Successfully removed the Registry Key value: $($RegKeyPath)$($RegKeyName)"
-            exit 0
+            Write-Output "Successfully removed the Registry Key value: $($RegKeyPath)$($RegKeyName)"
         }
         catch
         {
-            Write-Host "Failed to remove the Registry Key value: $($RegKeyPath)$($RegKeyName)"
-            exit 1
+            Write-Output "Failed to remove the Registry Key value: $($RegKeyPath)$($RegKeyName)"
+            $allSuccess = $false
         }
     }
-} 
+    if ($allSuccess)
+    {
+        exit 0
+    }
+    else
+    {
+        exit 1
+    }
+}
 
 main

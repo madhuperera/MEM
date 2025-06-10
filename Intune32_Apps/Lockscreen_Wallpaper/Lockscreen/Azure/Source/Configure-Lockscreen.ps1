@@ -1,13 +1,16 @@
 param
 (
-    [string]$ClientName = "Sonitlo"
+    [string]$ClientName = "Sonitlo",
+    [string]$ImageName = "Lockscreen.jpg"
 )
+
+$DestinationPath = Join-Path "C:\Windows\Web\Screen" "$($ClientName)_$ImageName"
 
 $S_Reg_Key_ValuePair = @(
     @{
         KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImagePath"
-        ValueData = "C:\Windows\Web\Screen\$($ClientName)_Lockscreen.png"
+        ValueData = $DestinationPath
         ValueType = "String"
     },
     @{
@@ -59,6 +62,8 @@ Function Set-KeyValueData
 
 function main
 {
+    $allSucceeded = $true
+
     foreach ($Key in $S_Reg_Key_ValuePair)
     {
         $RegKeyPath = $Key.KeyPath
@@ -68,24 +73,30 @@ function main
 
         if (Get-KeyValueData -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -F_Reg_Key_Value_Data $RegKeyValue)
         {
-            Write-Host "Registry key value exists: $RegKeyPath\$RegKeyName = $RegKeyValue"
-            exit 0
+            Write-Output "Registry key value exists: $RegKeyPath\$RegKeyName = $RegKeyValue"
         }
         else
         {
             try
             {
                 Set-KeyValueData -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -F_Reg_Key_Value_Data $RegKeyValue -F_Reg_Key_Value_Type $RegKeyType
-                Write-Host "Successfully updated registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
-                exit 0
+                Write-Output "Successfully updated registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
             }
             catch
             {
-                Write-Host "Failed to set registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
-                exit 1
-            }          
-            
+                Write-Output "Failed to set registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
+                $allSucceeded = $false
+            }
         }
+    }
+
+    if ($allSucceeded)
+    {
+        exit 0
+    }
+    else
+    {
+        exit 1
     }
 }
 
