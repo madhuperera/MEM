@@ -1,0 +1,103 @@
+# Detect-AdobeSettings.ps1
+# Intune Proactive Remediation Detection Script for Adobe Acrobat Hardening
+
+# Define registry keys, value names, expected types, and expected data
+$RegistryChecks = 
+@{
+    "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" = 
+    @{
+        "bDisableJavaScript" = 
+        @{
+            Type = "DWord"
+            Data = 1
+        }
+        "bEnhancedSecurityStandalone" = 
+        @{
+            Type = "DWord"
+            Data = 1
+        }
+        "bEnhancedSecurityInBrowser" = 
+        @{
+            Type = "DWord"
+            Data = 1
+        }
+        "bProtectedMode" = 
+        @{
+            Type = "DWord"
+            Data = 1
+        }
+        "iProtectedView" = 
+        @{
+            Type = "DWord"
+            Data = 2
+        }
+        "bEnableProtectedModeAppContainer" = 
+        @{
+            Type = "DWord"
+            Data = 1
+        }
+    }
+    "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\Privileged" = 
+    @{
+        "bDisableTrustedFolders" = 
+        @{
+            Type = "DWord"
+            Data = 1
+        }
+    }
+}
+
+$Compliant = $true
+$ErrorMessages = @()
+
+Function Get-KeyValueData
+{
+    param
+    (
+        [string]$F_Reg_Key_Path,
+        [string]$F_Reg_Key_Value_Name,
+        [string]$F_Reg_Key_Value_Data
+    )
+
+    $key = Get-Item -Path $F_Reg_Key_Path -ErrorAction SilentlyContinue
+    if ($key -ne $null)
+    {
+        $value = $key.GetValue($F_Reg_Key_Value_Name)
+        if ($value -eq $F_Reg_Key_Value_Data)
+        {
+            return $true
+        }
+    }
+    return $false
+}
+
+foreach ($RegPath in $RegistryChecks.Keys)
+{
+    $KeyExists = Test-Path $RegPath
+    if (-not $KeyExists)
+    {
+        # If the key is missing, assume Adobe is not installed and consider compliant
+        continue
+    }
+    foreach ($ValueName in $RegistryChecks[$RegPath].Keys)
+    {
+        $Expected = $RegistryChecks[$RegPath][$ValueName]
+        $Result = Get-KeyValueData -F_Reg_Key_Path $RegPath -F_Reg_Key_Value_Name $ValueName -F_Reg_Key_Value_Data $Expected.Data
+        if (-not $Result)
+        {
+            $Compliant = $false
+            $ErrorMessages += "Incorrect or missing value '$ValueName' in '$RegPath'. Expected: $($Expected.Data)"
+        }
+    }
+}
+
+if ($Compliant) 
+{
+    Write-Output "Compliant: All Adobe Acrobat settings are correct."
+    exit 0
+} 
+else 
+{
+    Write-Output "Non-Compliant: " + ($ErrorMessages -join "; ")
+    exit 1
+}
