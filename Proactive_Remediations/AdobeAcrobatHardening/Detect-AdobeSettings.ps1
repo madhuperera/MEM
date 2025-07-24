@@ -76,8 +76,8 @@ foreach ($RegPath in $RegistryChecks.Keys)
     $KeyExists = Test-Path $RegPath
     if (-not $KeyExists)
     {
-        # If the key is missing, assume Adobe is not installed and consider compliant
-        continue
+        Write-Output "Compliant: Adobe Acrobat is possibly not installed. Registry key '$RegPath' does not exist."
+        exit 0
     }
     foreach ($ValueName in $RegistryChecks[$RegPath].Keys)
     {
