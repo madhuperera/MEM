@@ -4,7 +4,7 @@
 # Define registry keys, value names, expected types, and expected data
 $RegistryChecks = 
 @{
-    "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\FeatureLockDown" = 
+    "HKLM:\SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\FeatureLockDown" = 
     @{
         "bDisableJavaScript" = 
         @{
