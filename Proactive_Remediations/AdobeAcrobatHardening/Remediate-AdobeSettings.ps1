@@ -33,7 +33,7 @@ $RegistryChecks =
             Data = 1
         }
     }
-    "HKLM:\SOFTWARE\Policies\Adobe\Acrobat Reader\DC\Privileged" = 
+    "HKLM:\SOFTWARE\Policies\Adobe\Adobe Acrobat\DC\Privileged" = 
     @{
         "bDisableTrustedFolders" = 
         @{
