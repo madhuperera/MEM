@@ -4,15 +4,9 @@ $ApprovedListOfAdmins =
     "Admin2"
 )
 
-try 
-{
-    $LocalAdministrators = Get-LocalGroupMember -Group "Administrators" | Where-Object {$_.PrincipalSource -eq "Local"}
-} 
-catch 
-{
-    Write-Error "Failed to get local administrators: $_"
-    exit 1
-}
+
+$LocalAdministrators = Get-LocalGroupMember -Group "Administrators" -ErrorAction SilentlyContinue | Where-Object {$_.PrincipalSource -eq "Local"}
+
 
 $UnapprovedAdmins = $LocalAdministrators | Where-Object {
     $LocalUser = $_.Name -split '\\' | Select-Object -Last 1

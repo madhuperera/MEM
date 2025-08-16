@@ -73,12 +73,6 @@ Function Get-KeyValueData
 
 foreach ($RegPath in $RegistryChecks.Keys)
 {
-    $KeyExists = Test-Path $RegPath
-    if (-not $KeyExists)
-    {
-        Write-Output "Compliant: Adobe Acrobat is possibly not installed. Registry key '$RegPath' does not exist."
-        exit 0
-    }
     foreach ($ValueName in $RegistryChecks[$RegPath].Keys)
     {
         $Expected = $RegistryChecks[$RegPath][$ValueName]
