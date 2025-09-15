@@ -28,7 +28,6 @@ function Start-ScriptLogs
 {
     param
     (
-        [String] $F_CompanyName,
         [String] $F_ScriptName,
         [String] $F_LogDirectory = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\$F_ScriptName",
         [String] $F_LogName = "Logs.txt",
@@ -38,7 +37,7 @@ function Start-ScriptLogs
     Start-Transcript -Path $F_LogPath -Force -Append
 }
 
-Start-ScriptLogs -F_CompanyName $S_CompanyName -F_ScriptName $S_ScriptName
+Start-ScriptLogs -F_ScriptName $S_ScriptName
 
 # Initiating the Uninstall
 & ".\SCUT.exe" -noinstall
