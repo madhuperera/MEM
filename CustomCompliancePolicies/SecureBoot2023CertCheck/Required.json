@@ -1,0 +1,61 @@
+{
+  "Rules": [
+    {
+      "SettingName": "SecureBootKEK",
+      "Operator": "IsEquals",
+      "DataType": "String",
+      "Operand": "2023",
+      "MoreInfoUrl": "https://github.com/madhuperera/MEM/tree/main/CustomCompliancePolicies/SecureBoot2023CertCheck",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "Secure Boot KEK Certificate Version must be 2023",
+          "Description": "The Secure Boot KEK (Key Exchange Key) certificate version must be 2023 or later for compliance. Current value discovered: {ActualValue}"
+        },
+        {
+          "Language": "de_DE",
+          "Title": "Die Secure Boot KEK-Zertifikatversion muss 2023 sein",
+          "Description": "Die Secure Boot KEK-Zertifikatversion (Key Exchange Key) muss 2023 oder später sein, um Konformität zu gewährleisten. Aktueller erkannter Wert: {ActualValue}"
+        }
+      ]
+    },
+    {
+      "SettingName": "SecureBootDB",
+      "Operator": "IsEquals",
+      "DataType": "String",
+      "Operand": "2023",
+      "MoreInfoUrl": "https://github.com/madhuperera/MEM/tree/main/CustomCompliancePolicies/SecureBoot2023CertCheck",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "Secure Boot DB Certificate Version must be 2023",
+          "Description": "The Secure Boot DB (Database) certificate version must be 2023 or later for compliance. Current value discovered: {ActualValue}"
+        },
+        {
+          "Language": "de_DE",
+          "Title": "Die Secure Boot DB-Zertifikatversion muss 2023 sein",
+          "Description": "Die Secure Boot DB-Zertifikatversion (Datenbank) muss 2023 oder später sein, um Konformität zu gewährleisten. Aktueller erkannter Wert: {ActualValue}"
+        }
+      ]
+    },
+    {
+      "SettingName": "SecureBootDBHas2023",
+      "Operator": "IsEquals",
+      "DataType": "String",
+      "Operand": "true",
+      "MoreInfoUrl": "https://github.com/madhuperera/MEM/tree/main/CustomCompliancePolicies/SecureBoot2023CertCheck",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "Secure Boot DB must have 2023 Certificate",
+          "Description": "The Secure Boot DB (Database) must contain the Windows UEFI CA 2023 certificate. This certificate is required for enhanced security compliance. Current value discovered: {ActualValue}"
+        },
+        {
+          "Language": "de_DE",
+          "Title": "Secure Boot DB muss ein 2023-Zertifikat haben",
+          "Description": "Die Secure Boot DB (Datenbank) muss das Windows UEFI CA 2023-Zertifikat enthalten. Dieses Zertifikat ist für die Konformität mit verbesserter Sicherheit erforderlich. Aktueller erkannter Wert: {ActualValue}"
+        }
+      ]
+    }
+  ]
+}
