@@ -1,0 +1,32 @@
+{
+  "Rules": [
+    {
+      "SettingName": "ServiceStatus",
+      "Operator": "IsEquals",
+      "DataType": "String",
+      "Operand": "Running",
+      "MoreInfoUrl": "https://github.com/madhuperera/MEM/tree/main/CustomCompliancePolicies/CrowdStrikeFalcon",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "CrowdStrike Falcon Service must be Running",
+          "Description": "The CrowdStrike Falcon Service (CSFalconService) must be in a Running state for endpoint protection compliance. Current status: {ActualValue}. Please ensure the CrowdStrike Falcon agent is properly installed and the service is started."
+        }
+      ]
+    },
+    {
+      "SettingName": "ServiceExists",
+      "Operator": "IsEquals",
+      "DataType": "String",
+      "Operand": "true",
+      "MoreInfoUrl": "https://github.com/madhuperera/MEM/tree/main/CustomCompliancePolicies/CrowdStrikeFalcon",
+      "RemediationStrings": [
+        {
+          "Language": "en_US",
+          "Title": "CrowdStrike Falcon Service must be installed",
+          "Description": "The CrowdStrike Falcon Service (CSFalconService) must be installed on this device. Current status: Service not found. Please install the CrowdStrike Falcon agent to meet endpoint protection requirements."
+        }
+      ]
+    }
+  ]
+}
