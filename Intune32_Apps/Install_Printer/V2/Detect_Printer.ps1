@@ -33,10 +33,10 @@ param
 
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
-$LogFile = "$env:ProgramData\PrinterDeployment\Detect_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogDir = "$env:ProgramData\Microsoft\IntuneManagementExtension\Logs"
+$LogFile = "$LogDir\Detect_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 # Create log directory if it doesn't exist
-$LogDir = Split-Path -Path $LogFile -Parent
 if (!(Test-Path -Path $LogDir)) {
     New-Item -Path $LogDir -ItemType Directory -Force -ErrorAction SilentlyContinue | Out-Null
 }
@@ -84,6 +84,12 @@ function Update-OutputOnExit {
 Write-Log -Message "=========================================="
 Write-Log -Message "Printer Detection Script V2 Started"
 Write-Log -Message "=========================================="
+Write-Log -Message "Execution Context:"
+Write-Log -Message "  whoami: $(whoami)"
+Write-Log -Message "  PATH: $env:PATH"
+Write-Log -Message "  PSHOME: $PSHOME"
+Write-Log -Message "  Is64BitProcess: $([Environment]::Is64BitProcess)"
+Write-Log -Message "  PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE"
 
 Write-Log -Message "Detection Configuration:"
 Write-Log -Message "  Printer Name: $PrinterName"

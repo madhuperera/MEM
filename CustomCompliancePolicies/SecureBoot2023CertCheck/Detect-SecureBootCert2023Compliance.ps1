@@ -116,8 +116,8 @@ try {
         foreach ($cert in $KEKcerts) {
             $subject = $cert.SignatureSubject
             
-            # Look for "Microsoft Corporation KEK CA XXXX" and extract the year
-            if ($subject -match 'Microsoft Corporation KEK CA (\d{4})') {
+            # Look for "Microsoft Corporation KEK 2K CA XXXX" (or legacy "Microsoft Corporation KEK CA XXXX") and extract the year
+            if ($subject -match 'Microsoft Corporation KEK (?:2K )?CA (\d{4})') {
                 $KEKVersion = $matches[1]
                 break
             }
@@ -133,15 +133,18 @@ try {
     $DBcerts = Get-SecureBootCertSubjects -Database db
     
     # Extract DB version from certificate subjects
-    # Look for either "Microsoft Corporation UEFI CA" or "Microsoft Windows Production PCA"
+    # Look for either "Windows UEFI CA", "Microsoft Corporation UEFI CA", or "Microsoft Windows Production PCA"
     $DBVersions = @()
     
     if ($DBcerts) {
         foreach ($cert in $DBcerts) {
             $subject = $cert.SignatureSubject
             
-            # Look for "Microsoft Corporation UEFI CA XXXX" or "Microsoft Windows Production PCA XXXX" and extract the year
-            if ($subject -match 'Microsoft Corporation UEFI CA (\d{4})') {
+            # Look for "Windows UEFI CA XXXX", "Microsoft Corporation UEFI CA XXXX", or "Microsoft Windows Production PCA XXXX" and extract the year
+            if ($subject -match 'Windows UEFI CA (\d{4})') {
+                $DBVersions += [int]$matches[1]
+            }
+            elseif ($subject -match 'Microsoft Corporation UEFI CA (\d{4})') {
                 $DBVersions += [int]$matches[1]
             }
             elseif ($subject -match 'Microsoft Windows Production PCA (\d{4})') {

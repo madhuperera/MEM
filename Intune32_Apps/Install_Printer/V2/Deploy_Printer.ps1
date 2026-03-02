@@ -37,10 +37,10 @@ param
 
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
-$LogFile = "$env:ProgramData\PrinterDeployment\Deploy_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$LogDir = "$env:ProgramData\Microsoft\IntuneManagementExtension\Logs"
+$LogFile = "$LogDir\Deploy_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 # Create log directory if it doesn't exist
-$LogDir = Split-Path -Path $LogFile -Parent
 if (!(Test-Path -Path $LogDir)) {
     New-Item -Path $LogDir -ItemType Directory -Force | Out-Null
 }
@@ -168,11 +168,37 @@ function Test-PrinterDriverExists {
     }
 }
 
+function Get-PnpUtilPath {
+    $sysNativePath = Join-Path -Path $env:WINDIR -ChildPath 'SysNative\pnputil.exe'
+    $system32Path = Join-Path -Path $env:WINDIR -ChildPath 'System32\pnputil.exe'
+
+    if (Test-Path -Path $sysNativePath) {
+        return $sysNativePath
+    }
+
+    if (Test-Path -Path $system32Path) {
+        return $system32Path
+    }
+
+    $command = Get-Command pnputil.exe -ErrorAction SilentlyContinue
+    if ($command -and $command.Source) {
+        return $command.Source
+    }
+
+    return $null
+}
+
 # ==================== MAIN SCRIPT ====================
 
 Write-Log -Message "=========================================="
 Write-Log -Message "Printer Deployment Script V2 Started"
 Write-Log -Message "=========================================="
+Write-Log -Message "Execution Context:"
+Write-Log -Message "  whoami: $(whoami)"
+Write-Log -Message "  PATH: $env:PATH"
+Write-Log -Message "  PSHOME: $PSHOME"
+Write-Log -Message "  Is64BitProcess: $([Environment]::Is64BitProcess)"
+Write-Log -Message "  PROCESSOR_ARCHITECTURE: $env:PROCESSOR_ARCHITECTURE"
 
 # Validate parameters
 if (!(Test-Parameters)) {
@@ -228,9 +254,15 @@ if (!(Test-PrinterDriverExists -DriverName $PrinterDriverModelName)) {
     Write-Log -Message "Installing printer driver: $PrinterDriverModelName..."
     
     try {
+        $PnpUtilPath = Get-PnpUtilPath
+        Write-Log -Message "Resolved pnputil path: $PnpUtilPath"
+        if (-not $PnpUtilPath) {
+            throw "pnputil.exe was not found in SysNative, System32, or PATH"
+        }
+
         # Step 1: Add driver package to Windows driver store using pnputil
         Write-Log -Message "Adding driver package to Windows driver store..."
-        $pnpResult = & pnputil.exe /add-driver "$DriverINFPath" /install 2>&1
+        $pnpResult = & $PnpUtilPath /add-driver "$DriverINFPath" /install 2>&1
         
         if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3010) {
             throw "pnputil failed with exit code $LASTEXITCODE. Output: $pnpResult"
