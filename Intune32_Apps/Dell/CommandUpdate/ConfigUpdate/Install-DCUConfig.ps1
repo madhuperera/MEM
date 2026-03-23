@@ -11,25 +11,16 @@ If ($ENV:PROCESSOR_ARCHITEW6432 -eq "AMD64") {
 [String] $SReg_Key_Parent_Path = "HKLM:\SOFTWARE\IntuneManagedApps"
 [String] $SReg_Key_Name = "DellCommandConfig"
 [String] $SReg_Key_Value_Name = "Version"
-[String] $SReg_Key_Value_Data = "2023.07.21"
+[String] $SReg_Key_Value_Data = "2026.03.21.001"
 [ValidateSet("String", "ExpandString", "Binary", "DWord", "MultiString", "Qword")] $SReg_Key_Value_Type = "String"
-[String] $CompanyName = "MEM" # Please change this
 [String] $DCUCLIPath = "C:\Program Files\Dell\CommandUpdate\dcu-cli.exe"
 # Configuration
-[String] $ConfigDirectory = "C:\ProgramData\$($CompanyName)IntuneManaged\Configs\DellConfigUpdate"
+[String] $ConfigDirectory = "C:\ProgramData\IntuneManaged\Configs\DellConfigUpdate"
 [String] $ConfigName = "Settings.xml"
 [String] $ConfigPath = "$ConfigDirectory\$ConfigName"
-# Logging
-[String] $LogDirectory = "C:\ProgramData\$($CompanyName)IntuneManaged\Logs\DellConfigUpdate"
-[String] $LogName = "Logs.txt"
-[String] $LogPath = "$LogDirectory\$LogName"
-[String] $CustomLogName = "CustomLogs.txt"
-[String] $CustomLogPath = "$LogDirectory\$CustomLogName"
 
 [bool] $ExitWithError = $true
 [bool] $ExitWithNoError = $false
-
-Start-Transcript -Path $LogPath -Force -Append
 
 function Update-RegistryKey {
     param
@@ -40,7 +31,7 @@ function Update-RegistryKey {
         [String] $Reg_Key_Value_Data,
         [ValidateSet("String", "ExpandString", "Binary", "DWord", "MultiString", "Qword")] $Reg_Key_Value_Type
     )
-    "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss__")$Reg_Key_Parent_Path\$Reg_Key_Name\$Reg_Key_Value_Name\$Reg_Key_Value_Data\$Reg_Key_Value_Type" | Out-File -FilePath $CustomLogPath -Append -Force -ErrorAction SilentlyContinue
+    Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") Registry: $Reg_Key_Parent_Path\$Reg_Key_Name\$Reg_Key_Value_Name = $Reg_Key_Value_Data ($Reg_Key_Value_Type)"
     if (!(Test-Path -Path "$Reg_Key_Parent_Path\$Reg_Key_Name" -PathType Container)) {
         New-Item -Path $Reg_Key_Parent_Path -Name $Reg_Key_Name -ItemType Conatiner -Force -Verbose | Out-Null
     }
@@ -64,14 +55,12 @@ function Update-OutputOnExit {
         [String] $F_Message
     )
     
-    Write-Host "STATUS=$F_Message" -ErrorAction SilentlyContinue
+    Write-Output "STATUS=$F_Message"
 
     if ($F_ExitCode) {
-        Stop-Transcript
         exit 1
     }
     else {
-        Stop-Transcript
         exit 0
     }
 }
@@ -87,7 +76,7 @@ if (Test-Path -Path $DCUCLIPath -PathType Leaf -ErrorAction SilentlyContinue) {
     
     & $DCUCLIPath /configure -importSettings="$ConfigPath"
     if ($LASTEXITCODE -eq 0) {
-        "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss__")$SReg_Key_Parent_Path\$SReg_Key_Name\$SReg_Key_Value_Name\$SReg_Key_Value_Data\$SReg_Key_Value_Type" | Out-File -FilePath $CustomLogPath -Append -Force -ErrorAction SilentlyContinue
+        Write-Output "$(Get-Date -Format "yyyy-MM-dd-HH:mm:ss") DCU import succeeded, updating registry"
         if (Update-RegistryKey -Reg_Key_Parent_Path $SReg_Key_Parent_Path -Reg_Key_Name $SReg_Key_Name -Reg_Key_Value_Name $SReg_Key_Value_Name -Reg_Key_Value_Data $SReg_Key_Value_Data -Reg_Key_Value_Type $SReg_Key_Value_Type) {
             Update-OutputOnExit -F_ExitCode $ExitWithNoError -F_Message "SUCCESS"
         }
