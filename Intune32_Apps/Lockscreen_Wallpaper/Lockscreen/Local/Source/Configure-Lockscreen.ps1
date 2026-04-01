@@ -1,124 +1,116 @@
-param
-(
-    [string]$ClientName = "Sonitlo",
-    [string]$ImageName = "Lockscreen.jpg"
-)
+# ============================================================
+# Script Variables
+# ============================================================
+$ImageName       = "Lockscreen.jpg"
+$DestinationPath = "C:\Windows\Web\Screen\$ImageName"
+$LogPath         = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\Configure-Lockscreen.log"
 
-$DestinationPath = Join-Path "C:\Windows\Web\Screen" "$($ClientName)_$ImageName"
-
-$S_Reg_Key_ValuePair = 
-@(
+$RegKeyValuePairs = @(
     @{
-        KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+        KeyPath   = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImagePath"
         ValueData = $DestinationPath
         ValueType = "String"
     },
     @{
-        KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+        KeyPath   = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImageStatus"
         ValueData = 1
         ValueType = "DWord"
     }
 )
 
-# Scenario 1: Detect the key value data
-Function Get-KeyValueData
-{
-    param
-    (
-        [string]$F_Reg_Key_Path,
-        [string]$F_Reg_Key_Value_Name,
-        [string]$F_Reg_Key_Value_Data
-    )
-
-    $key = Get-Item -Path $F_Reg_Key_Path -ErrorAction SilentlyContinue
-    if ($key -ne $null)
-    {
-        $value = $key.GetValue($F_Reg_Key_Value_Name)
-        if ($value -eq $F_Reg_Key_Value_Data)
-        {
-            return $true
-        }
-    }
-    return $false
-}
-
-# Scenario 2: Create or update the key value data
+# ============================================================
+# Functions
+# ============================================================
 Function Set-KeyValueData
 {
     param
     (
-        [string]$F_Reg_Key_Path,
-        [string]$F_Reg_Key_Value_Name,
-        [string]$F_Reg_Key_Value_Data,
-        [string]$F_Reg_Key_Value_Type
-    )
-    if (!(Test-Path $F_Reg_Key_Path))
-    {
-        New-Item -Path $F_Reg_Key_Path -Force | Out-Null
-    }
-    New-ItemProperty -Path $F_Reg_Key_Path -Name $F_Reg_Key_Value_Name -Value $F_Reg_Key_Value_Data -PropertyType $F_Reg_Key_Value_Type -Force | Out-Null
-}
-
-
-Function Copy-FileWithErrorHandling
-{
-    param
-    (
-        [string]$SourcePath,
-        [string]$DestinationPath
+        [string]$KeyPath,
+        [string]$ValueName,
+        [string]$ValueData,
+        [string]$ValueType
     )
 
-    try
+    if (!(Test-Path $KeyPath))
     {
-        if (Test-Path -Path $SourcePath)
-        {
-            Copy-Item -Path $SourcePath -Destination $DestinationPath -Force
-            Write-Output "File copied successfully from $SourcePath to $DestinationPath"
-        }
-        else
-        {
-            Write-Output "Source file does not exist: $SourcePath"
-        }
+        New-Item -Path $KeyPath -Force | Out-Null
     }
-    catch
-    {
-        Write-Output "Error occurred while copying file: $_"
-    }
+    New-ItemProperty -Path $KeyPath -Name $ValueName -Value $ValueData -PropertyType $ValueType -Force | Out-Null
 }
-function main
+
+# ============================================================
+# Main
+# ============================================================
+Start-Transcript -Path $LogPath -Force -Append
+
+try
 {
-    # Copy the lockscreen image to the target location
-    $SourcePath = Join-Path -Path $PSScriptRoot -ChildPath $ImageName    
-    Copy-FileWithErrorHandling -SourcePath $SourcePath -DestinationPath $DestinationPath
+    # Copy the lockscreen image to the destination
+    $SourcePath = Join-Path -Path $PSScriptRoot -ChildPath $ImageName
 
-
-    foreach ($Key in $S_Reg_Key_ValuePair)
+    if (Test-Path -Path $SourcePath)
     {
-        $RegKeyPath = $Key.KeyPath
-        $RegKeyName = $Key.ValueName
-        $RegKeyValue = $Key.ValueData
-        $RegKeyType = $Key.ValueType
+        Copy-Item -Path $SourcePath -Destination $DestinationPath -Force
+        Write-Host "File copied: $SourcePath -> $DestinationPath"
+    }
+    else
+    {
+        Write-Host "Source file not found: $SourcePath"
+        Stop-Transcript
+        exit 1
+    }
 
-        if (Get-KeyValueData -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -F_Reg_Key_Value_Data $RegKeyValue)
+    # Remove any unexpected LockScreen-prefixed values under the parent key
+    $ParentKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+    $AllowedValues = $RegKeyValuePairs | ForEach-Object { $_.ValueName }
+
+    if (Test-Path -Path $ParentKeyPath)
+    {
+        $existingValues = Get-Item -Path $ParentKeyPath | Select-Object -ExpandProperty Property
+        foreach ($valueName in $existingValues)
         {
-            Write-Host "Registry key value exists: $RegKeyPath\$RegKeyName = $RegKeyValue"
-        }
-        else
-        {
-            try
+            if ($valueName -like "LockScreen*" -and $valueName -notin $AllowedValues)
             {
-                Set-KeyValueData -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -F_Reg_Key_Value_Data $RegKeyValue -F_Reg_Key_Value_Type $RegKeyType
-                Write-Host "Successfully updated registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
+                try
+                {
+                    Remove-ItemProperty -Path $ParentKeyPath -Name $valueName -Force -ErrorAction Stop
+                    Write-Host "Removed unexpected value: $ParentKeyPath\$valueName"
+                }
+                catch
+                {
+                    Write-Host "Failed to remove unexpected value: $ParentKeyPath\$valueName - $_"
+                    Stop-Transcript
+                    exit 1
+                }
             }
-            catch
-            {
-                Write-Host "Failed to set registry key value: $RegKeyPath\$RegKeyName = $RegKeyValue"
-            }          
-            
         }
     }
-}
 
-main
+    # Set registry key values
+    foreach ($Key in $RegKeyValuePairs)
+    {
+        try
+        {
+            Set-KeyValueData -KeyPath $Key.KeyPath -ValueName $Key.ValueName -ValueData $Key.ValueData -ValueType $Key.ValueType
+            Write-Host "Registry set: $($Key.KeyPath)\$($Key.ValueName) = $($Key.ValueData)"
+        }
+        catch
+        {
+            Write-Host "Failed to set: $($Key.KeyPath)\$($Key.ValueName) - $_"
+            Stop-Transcript
+            exit 1
+        }
+    }
+
+    Write-Host "Lockscreen configured successfully."
+    Stop-Transcript
+    exit 0
+}
+catch
+{
+    Write-Host "Unexpected error: $_"
+    Stop-Transcript
+    exit 1
+}
