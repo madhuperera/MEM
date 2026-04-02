@@ -62,7 +62,7 @@ try
         exit 1
     }
 
-    # Remove any unexpected LockScreen-prefixed values under the parent key
+    # Remove any unexpected LockScreen-prefixed values under the PersonalizationCSP key
     $ParentKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
     $AllowedValues = $RegKeyValuePairs | ForEach-Object { $_.ValueName }
 
@@ -81,6 +81,31 @@ try
                 catch
                 {
                     Write-Host "Failed to remove unexpected value: $ParentKeyPath\$valueName - $_"
+                    Stop-Transcript
+                    exit 1
+                }
+            }
+        }
+    }
+
+    # Remove any LockScreen-related values under old GPO path
+    $GpoKeyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+
+    if (Test-Path -Path $GpoKeyPath)
+    {
+        $gpoValues = Get-Item -Path $GpoKeyPath | Select-Object -ExpandProperty Property
+        foreach ($valueName in $gpoValues)
+        {
+            if ($valueName -like "*LockScreen*")
+            {
+                try
+                {
+                    Remove-ItemProperty -Path $GpoKeyPath -Name $valueName -Force -ErrorAction Stop
+                    Write-Host "Removed GPO value: $GpoKeyPath\$valueName"
+                }
+                catch
+                {
+                    Write-Host "Failed to remove GPO value: $GpoKeyPath\$valueName - $_"
                     Stop-Transcript
                     exit 1
                 }

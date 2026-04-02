@@ -53,7 +53,7 @@ try
         }
     }
 
-    # Check for unexpected LockScreen-prefixed values
+    # Check for unexpected LockScreen-prefixed values under PersonalizationCSP
     $ParentKeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
     $AllowedValues = $RegKeyValuePairs | ForEach-Object { $_.ValueName }
 
@@ -65,6 +65,22 @@ try
             if ($valueName -like "LockScreen*" -and $valueName -notin $AllowedValues)
             {
                 Write-Host "Unexpected LockScreen value found: $ParentKeyPath\$valueName"
+                exit 1
+            }
+        }
+    }
+
+    # Check for stale LockScreen-related values under old GPO path
+    $GpoKeyPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+
+    if (Test-Path -Path $GpoKeyPath)
+    {
+        $gpoValues = Get-Item -Path $GpoKeyPath | Select-Object -ExpandProperty Property
+        foreach ($valueName in $gpoValues)
+        {
+            if ($valueName -like "*LockScreen*")
+            {
+                Write-Host "Stale GPO LockScreen value found: $GpoKeyPath\$valueName"
                 exit 1
             }
         }
