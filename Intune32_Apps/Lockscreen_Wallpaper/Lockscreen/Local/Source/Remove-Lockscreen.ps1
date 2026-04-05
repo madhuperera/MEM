@@ -1,45 +1,77 @@
-$S_Reg_Key_ValuePair = @(
+# ============================================================
+# Script Variables
+# ============================================================
+$ImageName       = "Lockscreen.jpg"
+$DestinationPath = "C:\Windows\Web\Screen\$ImageName"
+$LogPath         = "C:\ProgramData\Microsoft\IntuneManagementExtension\Logs\Remove-Lockscreen.log"
+
+$RegKeyValuePairs = @(
     @{
-        KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+        KeyPath   = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImagePath"
     },
     @{
-        KeyPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
+        KeyPath   = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\PersonalizationCSP"
         ValueName = "LockScreenImageStatus"
     }
 )
 
-Function Remove-KeyValueName
-{
-    param
-    (
-        [string]$F_Reg_Key_Path,
-        [string]$F_Reg_Key_Value_Name
-    )
-    if (Test-Path $F_Reg_Key_Path)
-    {
-        Remove-ItemProperty -Path $F_Reg_Key_Path -Name $F_Reg_Key_Value_Name
-    }
-}
+# ============================================================
+# Main
+# ============================================================
+Start-Transcript -Path $LogPath -Force -Append
 
-function main
+try
 {
-    foreach ($Key in $S_Reg_Key_ValuePair)
+    # Remove registry key values
+    foreach ($Key in $RegKeyValuePairs)
     {
-        $RegKeyPath = $Key.KeyPath
-        $RegKeyName = $Key.ValueName
-
-       
         try
         {
-            Remove-KeyValueName -F_Reg_Key_Path $RegKeyPath -F_Reg_Key_Value_Name $RegKeyName -ErrorAction SilentlyContinue
-            Write-Host "Successfully removed the Registry Key value: $($RegKeyPath)$($RegKeyName)"
+            if (Test-Path $Key.KeyPath)
+            {
+                $existing = Get-ItemProperty -Path $Key.KeyPath -Name $Key.ValueName -ErrorAction SilentlyContinue
+                if ($existing)
+                {
+                    Remove-ItemProperty -Path $Key.KeyPath -Name $Key.ValueName -Force -ErrorAction Stop
+                    Write-Host "Removed: $($Key.KeyPath)\$($Key.ValueName)"
+                }
+                else
+                {
+                    Write-Host "Already absent: $($Key.KeyPath)\$($Key.ValueName)"
+                }
+            }
+            else
+            {
+                Write-Host "Key path not found: $($Key.KeyPath)"
+            }
         }
         catch
         {
-            Write-Host "Failed to remove the Registry Key value: $($RegKeyPath)$($RegKeyName)"
+            Write-Host "Failed to remove: $($Key.KeyPath)\$($Key.ValueName) - $_"
+            Stop-Transcript
+            exit 1
         }
     }
-} 
 
-main
+    # Remove the lockscreen image file
+    if (Test-Path -Path $DestinationPath -PathType Leaf)
+    {
+        Remove-Item -Path $DestinationPath -Force -ErrorAction Stop
+        Write-Host "Removed file: $DestinationPath"
+    }
+    else
+    {
+        Write-Host "File already absent: $DestinationPath"
+    }
+
+    Write-Host "Lockscreen removal completed successfully."
+    Stop-Transcript
+    exit 0
+}
+catch
+{
+    Write-Host "Unexpected error: $_"
+    Stop-Transcript
+    exit 1
+}
