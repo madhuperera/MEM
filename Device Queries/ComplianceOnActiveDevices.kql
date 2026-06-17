@@ -1,0 +1,8 @@
+let ReportPeriod = 30d;
+Device
+| extend ReportedInPeriod = iff(LastSeenDateTime > ago(ReportPeriod), "Yes", "No")
+| where ReportedInPeriod == "Yes"
+| where ManagementAgent != "MS_SENSE"
+| summarize Total = count()
+    by ["Operating System"]=OsDescription, Compliance, ["Reported with Last 30 Days"]=ReportedInPeriod
+| sort by ["Operating System"] asc

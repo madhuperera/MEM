@@ -1,0 +1,7 @@
+let ReportPeriod = 30d;
+Device
+| extend ReportedInPeriod = iff(LastSeenDateTime > ago(ReportPeriod), "Yes", "No")
+| where ReportedInPeriod == "Yes" and Compliance != "COMPLIANT"
+| where ManagementAgent != "MS_SENSE"
+| project DeviceName, Model, ["Operating System"]= OsDescription, Ownership, Compliance, ManagementAgent
+| sort by Ownership, DeviceName
