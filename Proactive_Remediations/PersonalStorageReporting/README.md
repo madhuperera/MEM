@@ -13,9 +13,11 @@ under a root folder and reports the results as JSON for **Power BI / Excel**.
 |---|---|---|
 | `Detect-PersonalStorageReport.ps1` (v1) | **Frozen** — do not change | Exact-name subfolder sizing. |
 | `Detect-PersonalStorageReport_v2.ps1` (v2) | Current | Everything v1 does **plus** wildcard **groups** (e.g. `OneDrive*`) whose matches are summed under one label, with an **exclude** list for OneDrive for Business. |
+| `Detect-PersonalStorageReport_v3.ps1` (v3) | Current | **Discovery.** Sorts *every* non-hidden top-level profile folder into category **buckets** (Known / Supported / Legacy / UnmanagedOneDrive / **Other**). The **Other** bucket surfaces folders the user created that fall outside the known categories — the migration signal. See [v3 section](#v3--profile-folder-discovery). |
 
-v2 is a **superset** of v1 — the exact-subfolder columns are identical. Deploy v2 and cut
-the Intune assignment over when ready; v1 stays untouched as the known-good baseline.
+v2 is a **superset** of v1 — the exact-subfolder columns are identical. v3 is a **different
+purpose** (discover unknown folders, not measure known ones), so it is its own script.
+Deploy whichever fits the question you're answering; v1 stays untouched as the baseline.
 
 ---
 
@@ -119,11 +121,76 @@ yields exactly **one row per device**.
 
 ---
 
+## v3 — Profile Folder Discovery
+
+`Detect-PersonalStorageReport_v3.ps1` answers a different question: *which folders under the
+profile does the user actually keep data in* — so you can plan a migration. Rather than
+measuring a known list, it **discovers** every non-hidden top-level folder and sorts each
+into exactly one **category bucket**, then aggregates size / file count / folder count per
+bucket. Still a single flat JSON object — **one row per device**.
+
+### Buckets
+
+| Bucket | What lands here |
+|---|---|
+| `Known` | Managed standard folders — `Desktop`, `Documents`, `Pictures`. |
+| `Supported` | Still-legitimate common folders — `Downloads`, `Music`, `Videos`. |
+| `Legacy` | Deprecated / relic folders nobody should use on a work device — `Favorites`, `Contacts`, `Searches`, `Links`, `3D Objects`, `Saved Games`. |
+| `UnmanagedOneDrive` | Any `OneDrive*` folder **not** in `$ExcludeFolders` (consumer OneDrive, not the company one). |
+| `Other` | **Everything else = folders the user created.** The migration signal; names are listed in `Other_FoldersFound`. |
+
+### How classification works
+
+- **Hidden / system folders are skipped for free.** The top-level scan does *not* use
+  `-Force`, so `AppData`, legacy junctions, etc. never appear. (Sizing *inside* a kept
+  folder *does* use `-Force`, so hidden files within a real user folder still count.)
+- **Reparse points / junctions are skipped** to avoid loops and double-counting.
+- **The company OneDrive is excluded** via `$ExcludeFolders` (set it to your tenant's
+  folder name, e.g. `OneDrive - Contoso`).
+- **Standard known folders are matched by their real path, not a hard-coded name.** Their
+  paths are resolved at runtime with `[Environment]::GetFolderPath` (which reads the
+  logged-on user's shell-folder config), so a **localized display name is matched by its
+  actual path** — e.g. a profile that shows *Favourites* in Explorer is still classified
+  correctly because the on-disk known-folder path is what's compared. A *stray*
+  second folder with a different spelling isn't the real known-folder path, so it correctly
+  falls into `Other`.
+- **Precedence:** excluded → `UnmanagedOneDrive` → path-resolved known folder → category
+  name-list → `Other`.
+
+### v3 configuration block
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `$KnownFolders` | `Desktop, Documents, Pictures` | Name-list for the Known bucket. |
+| `$SupportedFolders` | `Downloads, Music, Videos` | Name-list for the Supported bucket. |
+| `$LegacyFolders` | `Favorites, Contacts, Searches, Links, 3D Objects, Saved Games` | Name-list for the Legacy bucket. |
+| `$OneDriveMatch` | `OneDrive*` | Pattern for the UnmanagedOneDrive bucket. |
+| `$ExcludeFolders` | `OneDrive - Contoso` | Company OneDrive (and anything else) to exclude entirely. |
+| `$CapacityThresholdGB` | `1` | Drives `Over<N>GB` against the combined total. |
+
+### v3 output columns (one row per device)
+
+Device: `DeviceName`, `UserName`, `CollectionTimeUtc`, `ParentFolderPath`.
+
+For each bucket (`Known`, `Supported`, `Legacy`, `UnmanagedOneDrive`, `Other`):
+`<Bucket>_SizeMB`, `<Bucket>_SizeGB`, `<Bucket>_ItemCount`, `<Bucket>_FolderCount`,
+`<Bucket>_FoldersFound` (sorted, `; `-separated **string**).
+
+Summary: `TotalSizeMB`, `TotalSizeGB`, `Over<N>GB`.
+
+> **Migration workflow:** filter Power BI to rows where `Other_FolderCount > 0` (or
+> `Other_SizeMB` is significant) to find users with data outside the standard folders, and
+> read `Other_FoldersFound` to see exactly which folders need a plan.
+
+---
+
 ## Intune setup
 
 1. Go to **Intune admin center → Devices → Scripts and remediations → Create**.
-2. **Detection script file:** upload `Detect-PersonalStorageReport_v2.ps1` (or the frozen
-   `Detect-PersonalStorageReport.ps1` if you only need exact-subfolder sizing).
+2. **Detection script file:** upload the script for the question you're answering —
+   `Detect-PersonalStorageReport_v2.ps1` (measure known folders + OneDrive groups),
+   `Detect-PersonalStorageReport_v3.ps1` (discover *all* profile folders by category), or
+   the frozen `Detect-PersonalStorageReport.ps1` (exact-subfolder sizing only).
 3. **Remediation script file:** leave **empty** (reporting only).
 4. Settings:
    - **Run this script using the logged-on credentials:** **Yes** (user context).
@@ -174,5 +241,11 @@ record, then expand the columns — same single-row-per-device result as Power B
   (by name / pattern). Set it to your tenant's folder name (e.g. `OneDrive - Contoso`) so
   business OneDrive is never included. Consumer folders (`OneDrive`, `OneDrive - Personal`)
   are reported.
+- **User context is required (v3):** known-folder resolution via
+  `[Environment]::GetFolderPath` reads the *logged-on user's* shell-folder config, so the
+  Intune remediation must run with **logged-on credentials**. Run as SYSTEM would resolve
+  the wrong profile.
+- **No disk writes:** all versions emit only to STDOUT (the Intune output column); nothing
+  is written to the device.
 - **PowerShell version:** written for **Windows PowerShell 5.1** (the Intune Management
   Extension default).
