@@ -1,39 +1,48 @@
 <#
 .SYNOPSIS
-    Windows Update Access - Intune Remediation REMEDIATION script.
+    Windows Update Policy Restrictions - Intune Remediation REMEDIATION script.
 
 .DESCRIPTION
-    Restores Windows Update access by setting the DisableWindowsUpdateAccess policy value
-    back to 0 where it has been set to 1.
+    Restores Windows Update by setting each of three restriction policy values back to 0
+    where it has been set to 1.
 
         HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
-            DisableWindowsUpdateAccess  (REG_DWORD)  1 -> 0
+            DisableWindowsUpdateAccess                    (REG_DWORD)  1 -> 0
+            DoNotConnectToWindowsUpdateInternetLocations  (REG_DWORD)  1 -> 0
+        HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+            NoAutoUpdate                                  (REG_DWORD)  1 -> 0
 
-    Uses exactly the same scoping rules as Detect-WindowsUpdateAccess.ps1, sharing the
-    Get-TargetState / Test-NeedsRemediation logic so the two can never disagree about what
-    is in scope.
+    These are the three values Microsoft names as "conflicting configurations" for Windows
+    Autopatch and Windows Update for Business. Uses exactly the same scoping rules as
+    Detect-WindowsUpdateAccess.ps1, sharing the Get-TargetState / Test-NeedsRemediation
+    logic so the two can never disagree about what is in scope.
+
+    Each target is handled independently: a failure on one does not stop the others, and
+    every outcome is reported per target.
 
     By default it only rewrites a value that is exactly 1. A value that is absent is left
-    alone (not configured already allows access - writing one would create policy where the
-    device had none), and a value holding something unexpected is reported but not touched.
-    Both behaviours are configurable below.
+    alone (not configured already allows updates - writing one would create policy where
+    the device had none, which matters most for the AU subkey, absent on a healthy device),
+    and a value holding something unexpected is reported but not touched. Both behaviours
+    are configurable below.
 
     Every write is verified by re-reading the registry: the value must come back as the
     desired data AND the desired kind, or it is reported as a failure.
 
-    IMPORTANT: if this value is being set by an actual Group Policy or an Intune ADMX /
-    settings-catalog policy, the next policy refresh will set it back to 1 and the device
+    IMPORTANT: if these values are being set by an actual Group Policy or an Intune ADMX /
+    settings-catalog policy, the next policy refresh will set them back to 1 and the device
     will oscillate between compliant and non-compliant forever. See the README - the fix in
     that case is to remove the policy at source, not to run this remediation.
 
-    Run Context: SYSTEM   (the policy lives in HKLM.)
+    Run Context: SYSTEM   (all three values live in HKLM.)
 
 .NOTES
     Author        : Madhu Perera
-    Script Version: 1.0
+    Script Version: 1.1
     Requirements  : Windows 10/11, Windows PowerShell 5.1
     Output        : Single-line JSON object to STDOUT. See Proactive_Remediations/CLAUDE.md.
-    Reference     : https://learn.microsoft.com/troubleshoot/windows-server/installing-updates-features-roles/troubleshoot-windows-update-error-code-0x8024002e
+    Reference     : https://learn.microsoft.com/windows/deployment/windows-autopatch/references/windows-autopatch-conflicting-configurations
+                    https://learn.microsoft.com/troubleshoot/windows-server/installing-updates-features-roles/troubleshoot-windows-update-error-code-0x8024002e
 
 .EXAMPLE
     powershell.exe -ExecutionPolicy Bypass -File .\Remediate-WindowsUpdateAccess.ps1
@@ -46,20 +55,53 @@
 # together.
 
 $S_SolutionName  = 'WindowsUpdateAccess'
-$S_ScriptVersion = '1.0'
+$S_ScriptVersion = '1.1'
 
 # Policy values to enforce. Each entry produces its own set of output columns.
-#   Label            - column-name prefix. Optional; defaults to Name.
+#   Label            - column-name prefix. Optional; defaults to Name. Keep it short - it
+#                      is repeated across five output columns, and the whole JSON record
+#                      must stay under Intune's 2048-character STDOUT limit.
 #   Path             - full provider path. Wildcards are NOT expanded.
 #   Name             - value name.
 #   Type             - expected RegistryValueKind. Also the kind written by remediation.
 #   NonCompliantData - the data that means "this needs fixing".
 #   DesiredData      - what remediation writes.
+#
+# These three values are the trio Microsoft names as "conflicting configurations" for
+# Windows Autopatch / Windows Update for Business. Each one independently suppresses part
+# of Windows Update, so all three are checked and reported separately - a device can be
+# non-compliant on any one of them.
 $S_TargetValues = @(
+    # "Turn off access to all Windows Update features" (ICM.admx / RemoveWindowsUpdate_ICM).
+    # 1 removes all Windows Update features and disables automatic updating.
     @{
-        Label            = 'DisableWindowsUpdateAccess'
+        Label            = 'WUAccess'
         Path             = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
         Name             = 'DisableWindowsUpdateAccess'
+        Type             = 'DWord'
+        NonCompliantData = 1
+        DesiredData      = 0
+    }
+
+    # "Do not connect to any Windows Update Internet locations".
+    # 1 stops the device reaching the public Windows Update service even for the metadata
+    # it needs, which can also break Microsoft Store and Delivery Optimization.
+    @{
+        Label            = 'WUInternet'
+        Path             = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
+        Name             = 'DoNotConnectToWindowsUpdateInternetLocations'
+        Type             = 'DWord'
+        NonCompliantData = 1
+        DesiredData      = 0
+    }
+
+    # "Configure Automatic Updates" set to Disabled (WindowsUpdate.admx / AutoUpdateCfg).
+    # 1 disables Automatic Updates; 0 is the documented default. Note this value lives in
+    # the AU SUBKEY, which frequently does not exist at all on a healthy device.
+    @{
+        Label            = 'NoAutoUpdate'
+        Path             = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'
+        Name             = 'NoAutoUpdate'
         Type             = 'DWord'
         NonCompliantData = 1
         DesiredData      = 0
@@ -74,7 +116,8 @@ $S_RemediateUnexpectedData = $false
 
 # $false (default) - an absent value is COMPLIANT. Not configured already allows Windows
 #                    Update access, so writing a value would create policy where the device
-#                    had none.
+#                    had none. This matters most for the AU subkey, which is absent on a
+#                    healthy device and should stay that way.
 # $true            - remediation creates the key and value set to DesiredData.
 $S_CreateIfMissing = $false
 
@@ -416,14 +459,14 @@ try
     if ($F_Data.InScopeCount -eq 0)
     {
         Write-IntuneResult -F_ScriptType 'Remediation' -F_Status 'NoActionRequired' -F_Data $F_Data `
-                           -F_Summary 'Nothing needed remediation by the time this ran; Windows Update access is not restricted.'
+                           -F_Summary 'Nothing needed remediation by the time this ran; Windows Update is not restricted by policy.'
         exit 0
     }
 
     if ($F_Data.FailedCount -eq 0)
     {
         Write-IntuneResult -F_ScriptType 'Remediation' -F_Status 'Success' -F_Data $F_Data `
-                           -F_Summary "Restored Windows Update access: set and verified $($F_Data.SetCount) policy value(s) to the desired data."
+                           -F_Summary "Restored Windows Update: set and verified $($F_Data.SetCount) of $($F_Data.TargetCount) policy value(s) to the desired data."
         exit 0
     }
 
@@ -443,7 +486,7 @@ catch
     # The device is still in its pre-remediation state, so this must be reported as a
     # failed remediation - exit 1, unlike the detection script's error path.
     Write-IntuneResult -F_ScriptType 'Remediation' -F_Status 'Error' -F_Data $F_Data `
-                       -F_Summary 'Remediation failed with an unhandled error; Windows Update access may still be restricted.' `
+                       -F_Summary 'Remediation failed with an unhandled error; Windows Update may still be restricted by policy.' `
                        -F_ErrorMessage $_.Exception.Message
     exit 1
 }
