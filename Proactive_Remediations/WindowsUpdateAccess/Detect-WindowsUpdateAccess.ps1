@@ -1,26 +1,38 @@
 <#
 .SYNOPSIS
-    Windows Update Access - Intune Remediation DETECTION script.
+    Windows Update Policy Restrictions - Intune Remediation DETECTION script.
 
 .DESCRIPTION
-    Detects whether Windows Update access has been turned off on the device by the
-    DisableWindowsUpdateAccess policy value, and reports the live state of that value.
+    Detects whether Windows Update has been restricted on the device by any of three policy
+    values, and reports the live state of each one independently.
 
         HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate
-            DisableWindowsUpdateAccess  (REG_DWORD)
+            DisableWindowsUpdateAccess                    (REG_DWORD)  1 = restricted
+            DoNotConnectToWindowsUpdateInternetLocations  (REG_DWORD)  1 = restricted
+        HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU
+            NoAutoUpdate                                  (REG_DWORD)  1 = restricted
 
-    This is the "Turn off access to all Windows Update features" policy (ICM.admx /
-    RemoveWindowsUpdate_ICM), under Computer Configuration > System > Internet
-    Communication Management > Internet Communication settings. A value of 1 removes all
-    Windows Update features, blocks automatic updating, and stops Device Manager pulling
-    driver updates. A value of 0 restores access.
+    These are the three values Microsoft names as "conflicting configurations" for Windows
+    Autopatch and Windows Update for Business:
+
+      * DisableWindowsUpdateAccess - "Turn off access to all Windows Update features"
+        (ICM.admx / RemoveWindowsUpdate_ICM). Removes all Windows Update features, disables
+        automatic updating, and stops Device Manager pulling driver updates.
+      * DoNotConnectToWindowsUpdateInternetLocations - "Do not connect to any Windows Update
+        Internet locations". Blocks the device from reaching the public Windows Update
+        service, which can also break Microsoft Store and Delivery Optimization.
+      * NoAutoUpdate - "Configure Automatic Updates" set to Disabled (WindowsUpdate.admx /
+        AutoUpdateCfg). 0 is the documented default; 1 disables Automatic Updates.
+
+    Each is checked separately, so a device can be non-compliant on any one of them, and
+    the report shows exactly which.
 
     States reported per target:
       * Compliant    - present and already 0.
       * NonCompliant - present and set to 1. Remediation will set it to 0.
       * Unexpected   - present but neither 0 nor 1. Left alone by default.
       * TypeMismatch - present but not a DWord. Left alone by default.
-      * NotPresent   - policy not configured, which already allows access. Compliant.
+      * NotPresent   - policy not configured, which already allows updates. Compliant.
       * Unknown      - target not reached because detection errored.
 
     The device is reported NonCompliant (exit 1) when any target needs remediation. If the
@@ -32,14 +44,15 @@
     configured target (<Label>_Path / _Name / _Type / _Data / _State). In Power BI or
     Excel: Transform > Parse > JSON, expand, tick every field - one row per device.
 
-    Run Context: SYSTEM   (the policy lives in HKLM.)
+    Run Context: SYSTEM   (all three values live in HKLM.)
 
 .NOTES
     Author        : Madhu Perera
-    Script Version: 1.0
+    Script Version: 1.1
     Requirements  : Windows 10/11, Windows PowerShell 5.1
     Output        : Single-line JSON object to STDOUT. See Proactive_Remediations/CLAUDE.md.
-    Reference     : https://learn.microsoft.com/troubleshoot/windows-server/installing-updates-features-roles/troubleshoot-windows-update-error-code-0x8024002e
+    Reference     : https://learn.microsoft.com/windows/deployment/windows-autopatch/references/windows-autopatch-conflicting-configurations
+                    https://learn.microsoft.com/troubleshoot/windows-server/installing-updates-features-roles/troubleshoot-windows-update-error-code-0x8024002e
 
 .EXAMPLE
     powershell.exe -ExecutionPolicy Bypass -File .\Detect-WindowsUpdateAccess.ps1
@@ -52,20 +65,53 @@
 # together.
 
 $S_SolutionName  = 'WindowsUpdateAccess'
-$S_ScriptVersion = '1.0'
+$S_ScriptVersion = '1.1'
 
 # Policy values to enforce. Each entry produces its own set of output columns.
-#   Label            - column-name prefix. Optional; defaults to Name.
+#   Label            - column-name prefix. Optional; defaults to Name. Keep it short - it
+#                      is repeated across five output columns, and the whole JSON record
+#                      must stay under Intune's 2048-character STDOUT limit.
 #   Path             - full provider path. Wildcards are NOT expanded.
 #   Name             - value name.
 #   Type             - expected RegistryValueKind. Also the kind written by remediation.
 #   NonCompliantData - the data that means "this needs fixing".
 #   DesiredData      - what remediation writes.
+#
+# These three values are the trio Microsoft names as "conflicting configurations" for
+# Windows Autopatch / Windows Update for Business. Each one independently suppresses part
+# of Windows Update, so all three are checked and reported separately - a device can be
+# non-compliant on any one of them.
 $S_TargetValues = @(
+    # "Turn off access to all Windows Update features" (ICM.admx / RemoveWindowsUpdate_ICM).
+    # 1 removes all Windows Update features and disables automatic updating.
     @{
-        Label            = 'DisableWindowsUpdateAccess'
+        Label            = 'WUAccess'
         Path             = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
         Name             = 'DisableWindowsUpdateAccess'
+        Type             = 'DWord'
+        NonCompliantData = 1
+        DesiredData      = 0
+    }
+
+    # "Do not connect to any Windows Update Internet locations".
+    # 1 stops the device reaching the public Windows Update service even for the metadata
+    # it needs, which can also break Microsoft Store and Delivery Optimization.
+    @{
+        Label            = 'WUInternet'
+        Path             = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate'
+        Name             = 'DoNotConnectToWindowsUpdateInternetLocations'
+        Type             = 'DWord'
+        NonCompliantData = 1
+        DesiredData      = 0
+    }
+
+    # "Configure Automatic Updates" set to Disabled (WindowsUpdate.admx / AutoUpdateCfg).
+    # 1 disables Automatic Updates; 0 is the documented default. Note this value lives in
+    # the AU SUBKEY, which frequently does not exist at all on a healthy device.
+    @{
+        Label            = 'NoAutoUpdate'
+        Path             = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'
+        Name             = 'NoAutoUpdate'
         Type             = 'DWord'
         NonCompliantData = 1
         DesiredData      = 0
@@ -80,7 +126,8 @@ $S_RemediateUnexpectedData = $false
 
 # $false (default) - an absent value is COMPLIANT. Not configured already allows Windows
 #                    Update access, so writing a value would create policy where the device
-#                    had none.
+#                    had none. This matters most for the AU subkey, which is absent on a
+#                    healthy device and should stay that way.
 # $true            - remediation creates the key and value set to DesiredData.
 $S_CreateIfMissing = $false
 
@@ -371,14 +418,14 @@ try
 
     if ($F_Data.NeedsRemediation -gt 0)
     {
-        $F_Summary = "Windows Update access is turned off: $($F_Data.NeedsRemediation) policy value(s) need remediation. " +
+        $F_Summary = "Windows Update is restricted by policy: $($F_Data.NeedsRemediation) of $($F_Data.TargetCount) value(s) need remediation. " +
                      "$($F_Data.CompliantCount) already compliant; $($F_Data.NotPresentCount) not configured; $($F_Data.UnexpectedCount) unexpected."
 
         Write-IntuneResult -F_ScriptType 'Detection' -F_Status 'NonCompliant' -F_Data $F_Data -F_Summary $F_Summary
         exit 1
     }
 
-    $F_Summary = "Windows Update access is not restricted by policy. " +
+    $F_Summary = "Windows Update is not restricted by any of the $($F_Data.TargetCount) checked policy value(s). " +
                  "$($F_Data.CompliantCount) value(s) set as desired; $($F_Data.NotPresentCount) not configured; $($F_Data.UnexpectedCount) unexpected but out of scope."
 
     Write-IntuneResult -F_ScriptType 'Detection' -F_Status 'Compliant' -F_Data $F_Data -F_Summary $F_Summary
@@ -390,7 +437,7 @@ catch
     # could not be assessed; Status = 'Error' is what surfaces the failure in reporting.
     # Any target not reached keeps its pre-initialised State of 'Unknown'.
     Write-IntuneResult -F_ScriptType 'Detection' -F_Status 'Error' -F_Data $F_Data `
-                       -F_Summary 'Detection failed; Windows Update access policy state could not be determined.' `
+                       -F_Summary 'Detection failed; Windows Update policy state could not be determined.' `
                        -F_ErrorMessage $_.Exception.Message
     exit 0
 }
