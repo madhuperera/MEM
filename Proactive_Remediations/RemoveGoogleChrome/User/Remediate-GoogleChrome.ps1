@@ -39,14 +39,41 @@ $S_Shortcuts = @(
     "$env:AppData\Microsoft\Windows\Start Menu\Programs\Google Chrome.lnk"
 )
 
-function Test-ChromeInstalled
+# If an uninstaller unexpectedly shows a confirmation dialog, Start-Process -Wait
+# would block forever waiting for a click, and Intune's own script timeout would
+# eventually kill the whole process tree with no output ever flushed back.
+# Bounding the wait ourselves means a hung uninstaller is reported clearly instead
+# of silently swallowed.
+$S_UninstallTimeoutSeconds = 300
+
+function Get-ChromeEvidence
 {
+    <# Returns an array of human-readable strings describing what was found, so a
+       remediation failure can say WHY Chrome is still detected instead of just that
+       it is — the registry key and the binary are independent signals and either
+       one lingering is useful to know when diagnosing a failed uninstall. #>
+    $F_Evidence = @()
+
     if (Test-Path $S_UninstallPath)
     {
         $DisplayName = (Get-ItemProperty -Path $S_UninstallPath -ErrorAction SilentlyContinue).DisplayName
-        if ($DisplayName -like "Google Chrome*") { return $true }
+        if ($DisplayName -like "Google Chrome*")
+        {
+            $F_Evidence += "Registry key: $S_UninstallPath (DisplayName='$DisplayName')"
+        }
     }
-    return (Test-Path $S_BinaryPath)
+
+    if (Test-Path $S_BinaryPath)
+    {
+        $F_Evidence += "Binary: $S_BinaryPath"
+    }
+
+    return $F_Evidence
+}
+
+function Test-ChromeInstalled
+{
+    return (Get-ChromeEvidence).Count -gt 0
 }
 
 function Get-UninstallInvocation
@@ -76,6 +103,38 @@ function Get-UninstallInvocation
     return [PSCustomObject]@{ Exe = $F_Exe; Args = "$F_Args --force-uninstall".Trim() }
 }
 
+function Invoke-UninstallWithTimeout
+{
+    <# Starts the uninstaller and waits up to $F_TimeoutSeconds for it to exit,
+       rather than blocking forever like Start-Process -Wait would. If it doesn't
+       exit in time, it's force-killed so the script can still finish and report
+       a clear, diagnosable result instead of hanging until Intune kills it. #>
+    param
+    (
+        [string]$F_Exe,
+        [string]$F_Args,
+        [int]$F_TimeoutSeconds
+    )
+
+    try
+    {
+        $F_Process = Start-Process -FilePath $F_Exe -ArgumentList $F_Args -WindowStyle Hidden -PassThru -ErrorAction Stop
+
+        if (-not $F_Process.WaitForExit($F_TimeoutSeconds * 1000))
+        {
+            Write-Output "Uninstaller did not exit within $F_TimeoutSeconds seconds; terminating: $F_Exe"
+            Stop-Process -Id $F_Process.Id -Force -ErrorAction SilentlyContinue
+            return
+        }
+
+        Write-Output "Uninstaller exited with code $($F_Process.ExitCode)"
+    }
+    catch
+    {
+        Write-Output "Uninstaller invocation failed: $_"
+    }
+}
+
 try
 {
     if (-not (Test-ChromeInstalled))
@@ -99,14 +158,7 @@ try
             $F_Parsed = Get-UninstallInvocation -F_UninstallString $F_UninstallString
 
             Write-Output "Running uninstaller: $($F_Parsed.Exe) $($F_Parsed.Args)"
-            try
-            {
-                Start-Process -FilePath $F_Parsed.Exe -ArgumentList $F_Parsed.Args -Wait -PassThru -ErrorAction Stop | Out-Null
-            }
-            catch
-            {
-                Write-Output "Uninstaller invocation failed: $_"
-            }
+            Invoke-UninstallWithTimeout -F_Exe $F_Parsed.Exe -F_Args $F_Parsed.Args -F_TimeoutSeconds $S_UninstallTimeoutSeconds
         }
         else
         {
@@ -136,9 +188,16 @@ try
     # component — if removal failed, Chrome's own entry would otherwise be excluded
     # from the "other Google apps" scan below and Update could be deleted out from
     # under a still-installed Chrome.
-    if (Test-ChromeInstalled)
+    #
+    # Deliberately Write-Output (not Write-Error): this is an expected, handled
+    # outcome, not an exception. With $ErrorActionPreference = "Stop", Write-Error
+    # here would be caught by the try/catch below and re-wrapped as a generic
+    # "Remediation failed: ..." message, discarding exactly the evidence detail
+    # that's needed to diagnose why the uninstall didn't take.
+    $F_RemainingEvidence = Get-ChromeEvidence
+    if ($F_RemainingEvidence.Count -gt 0)
     {
-        Write-Error "Remediation incomplete: Google Chrome still detected for current user."
+        Write-Output "Remediation incomplete: Google Chrome still detected for current user. Evidence: $($F_RemainingEvidence -join '; ')"
         exit 1
     }
 
