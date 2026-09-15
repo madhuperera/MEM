@@ -19,7 +19,11 @@ field**, one row per device.
 
 | Script | Status | Adds |
 |---|---|---|
-| `Detect-OneDriveKFMReadiness.ps1` (v1.0) | **Current** | Projected path length, invalid names, reparse points, nested known folders; budgeted sample of offending paths. |
+| `_v1/Detect-OneDriveKFMReadiness.ps1` (1.0) | **Frozen** — do not change | Projected path length, invalid names, reparse points, nested known folders; budgeted sample of offending paths. |
+| `_v2/Detect-OneDriveKFMReadiness.ps1` (2.1) | **Current** | **Fixes** v1 counting OneDrive Files On-Demand placeholders as links (and not scanning beneath them) — links are now identified by reparse tag. **Adds** OneDrive root resolution by **tenant ID** (`$S_TenantId`), so users whose sync folder still carries an older organisation name are recognised as already in OneDrive; `KfmState` (`AlreadyMigrated` / `MigratedWithIssues` / `Partial` / `Ready` / `NotReady` / `NotFound`); `OneDriveAccounts` listing every business sync folder name found; `FoldersInOneDrive`. Office temp files (`~$*`, `*.tmp`) no longer block readiness — they are counted in `TotalTempFiles` with a caution in `Summary`. |
+
+> **Do not deploy v1.** On any profile where a known folder sits inside a OneDrive folder
+> the script does not recognise, v1 reports every placeholder as a link and `Files = 0`.
 
 Planned (not yet built): writing the **full** list of offending paths to a report file in
 the user's Documents folder. The JSON output can only ever carry a sample — see
@@ -35,10 +39,19 @@ For **every file and folder** under each known folder:
 |---|---|---|
 | **Projected path length** | The path the item *will* have once it lives at `<profile>\<OneDrive folder>\<KnownFolder>\…`. Anything whose projected length is **≥ 260** (configurable) is a `LongPath` issue. A known folder already inside OneDrive is measured at its current path. | KFM guidance: "entire file path, including the file name, contains fewer than 260 characters". |
 | **Invalid names** | Characters `" * : < > ? / \ \|` (optionally `#` `%`); leading/trailing space; names starting `~$`; `_vti_` anywhere; reserved names `.lock` `CON` `PRN` `AUX` `NUL` `COM0–9` `LPT0–9` (any extension); folders starting with `゛` (U+309B) or `ဧ` (U+1027). A **file under an invalid folder counts too** — it cannot sync. | OneDrive restrictions and limitations. |
-| **Reparse points** | Junctions and symbolic links. Files On-Demand placeholders are *also* reparse points and are **not** counted (cloud attributes excluded; known folders already inside OneDrive skip this check). | KFM: "Folder contains a reparse point (junction point or symlink)". |
+| **Reparse points** | Junctions and symbolic links, identified by reparse tag (`LinkType`). Files On-Demand placeholders are *also* reparse points but carry OneDrive's cloud tag, so they are scanned as ordinary content. | KFM: "Folder contains a reparse point (junction point or symlink)". |
 | **Nested known folders** | One known folder inside another (e.g. Pictures under Documents). Device-level flag only. | KFM: "Important folders aren't in the default locations". |
 
 `desktop.ini` is skipped entirely — OneDrive manages it and every known folder has one.
+
+**Office temp files** (`~$Report.docx` owner files, `*.tmp`) are transient and never synced
+by OneDrive; they exist whenever a document is open. They do **not** make a folder
+`NotReady` — one open Word document must not fail a device — but they are counted in
+`TotalTempFiles` and `Summary` carries a caution to close documents before migrating.
+
+**Folders already in OneDrive are still checked.** An invalid name inside a migrated
+folder is content OneDrive cannot sync, so it is reported (`KfmState =
+MigratedWithIssues`); the state makes clear the move itself has already happened.
 
 ### How the projected path is built
 
@@ -48,10 +61,20 @@ Projected:  C:\Users\JohnDoe\OneDrive - Contoso\Documents\MyLongFolder\LongFileN
 ```
 
 The known folder is recreated **by its on-disk name** directly under the OneDrive root.
-The OneDrive root is `%USERPROFILE%\<$S_OneDriveFolderName>` unless the user already has
-a business account whose sync folder has that name, in which case its real location is
-read from `HKCU:\Software\Microsoft\OneDrive\Accounts\Business*\UserFolder`
-(`OneDriveRootSource = Registry`).
+The OneDrive root is resolved from `HKCU:\Software\Microsoft\OneDrive\Accounts\Business*`
+in this order (`OneDriveRootSource` says which won):
+
+| Source | Rule |
+|---|---|
+| `RegistryTenant` | An account whose `ConfiguredTenantId` equals `$S_TenantId` — its `UserFolder` is the root **whatever the folder is called**. |
+| `RegistryName` | An account whose sync folder leaf equals `$S_OneDriveFolderName`. |
+| `Configured` | Neither matched: `%USERPROFILE%\<$S_OneDriveFolderName>`. |
+
+**Set `$S_TenantId`.** The sync folder is named `OneDrive - <organisation display name>`
+at sign-in and never renames itself, so a tenant whose display name has changed has users
+on two different folder names. Matching by tenant ID reports both as already in OneDrive;
+matching by name alone would project the older ones into a second folder that will never
+exist. `OneDriveAccounts` shows the folder name(s) each device actually has.
 
 ### Not checked
 
@@ -65,11 +88,14 @@ On Windows the 260 limit is always hit first.
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `$S_OneDriveFolderName` | `OneDrive - Contoso` | **Set this per tenant.** The sync folder name added to every projected path. |
+| `$S_OneDriveFolderName` | `OneDrive - Contoso` | **Set this per tenant.** The sync folder name added to every projected path when no registry account matches. |
+| `$S_TenantId` | `''` | **Set this per tenant.** Entra tenant ID; a business account with this `ConfiguredTenantId` is used as the OneDrive root regardless of folder name. |
+| `$S_MaxAccountsLength` | `120` | Character cap for `OneDriveAccounts`. |
 | `$S_KnownFolders` | Desktop, Documents, Pictures | Folders to assess. `Label` is the column prefix; `SpecialFolder` is resolved at runtime from the signed-in user's shell-folder config (redirected/localised folders are found by real path). Optional `Path` overrides resolution. |
 | `$S_MaxPathLength` | `260` | Projected length **≥** this is a LongPath issue. |
 | `$S_TreatHashPercentAsInvalid` | `$false` | Also flag `#` and `%` (tenants that never enabled them). |
 | `$S_IgnoreFileNames` | `desktop.ini` | Files skipped entirely. |
+| `$S_TempFilePatterns` | `~$*`, `*.tmp` | Transient files: counted in `TotalTempFiles`, never flagged, never block readiness. |
 | `$S_SampleMaxItems` | `20` | Cap on paths listed in `IssueSample`. Also capped by the character budget. |
 | `$S_SampleEntryMaxLength` | `90` | Longer sample entries are middle-elided with `...`. |
 | `$S_MaxJsonLength` | `2000` | Target ceiling for the whole line (Intune stores 2048). |
@@ -82,8 +108,8 @@ On Windows the 260 limit is always hit first.
 
 | `Status` | Meaning | Exit |
 |---|---|---|
-| `Compliant` | Every known folder found is ready (or none exist). | `0` |
-| `NonCompliant` | At least one known folder is not ready. | `1` (or `0` if `$S_ExitNonCompliantWhenNotReady = $false`) |
+| `Compliant` | Every known folder found is clean (or none exist) — `KfmState` is `Ready`, `Partial`, `AlreadyMigrated` or `NotFound`. | `0` |
+| `NonCompliant` | At least one known folder has blocking content — `KfmState` is `NotReady` or `MigratedWithIssues`. | `1` (or `0` if `$S_ExitNonCompliantWhenNotReady = $false`) |
 | `Error` | Readiness could not be determined — including when run as SYSTEM. | `0` |
 
 ---
@@ -93,7 +119,7 @@ On Windows the 260 limit is always hit first.
 One flat object per device, no arrays, no nested records. Example (not ready):
 
 ```json
-{"ScriptType":"Detection","Solution":"OneDriveKFMReadiness","ScriptVersion":"1.0","DeviceName":"RF-1234","UserName":"JohnDoe","RunContext":"User","CollectionTimeUtc":"2026-09-14T04:39:17Z","Status":"NonCompliant","OneDriveRootPath":"C:\\Users\\JohnDoe\\OneDrive - Contoso","OneDriveRootSource":"Registry","OneDriveSignedIn":"Yes","PathLengthLimit":260,"LongPathMode":"Prefixed","MigrationReady":"No","FoldersReady":1,"FoldersNotReady":2,"FoldersNotFound":0,"LongPathIssue":"Yes","InvalidNameIssue":"Yes","ReparsePointIssue":"Yes","NestedKnownFolders":"No","TotalFiles":11,"TotalLongPaths":3,"TotalBadNames":4,"TotalBadFolders":1,"TotalLinks":1,"ScanErrors":0,"Desktop_Path":"C:\\Users\\JohnDoe\\Desktop","Desktop_State":"NotReady","Desktop_InOneDrive":"No","Desktop_Files":1,"Desktop_LongPaths":0,"Desktop_BadNames":0,"Desktop_BadFolders":0,"Desktop_Links":1,"Desktop_MaxLen":52,"Documents_Path":"C:\\Users\\JohnDoe\\Documents","Documents_State":"NotReady","Documents_InOneDrive":"No","Documents_Files":9,"Documents_LongPaths":3,"Documents_BadNames":4,"Documents_BadFolders":1,"Documents_Links":0,"Documents_MaxLen":380,"Pictures_Path":"C:\\Users\\JohnDoe\\Pictures","Pictures_State":"Ready","Pictures_InOneDrive":"No","Pictures_Files":1,"Pictures_LongPaths":0,"Pictures_BadNames":0,"Pictures_BadFolders":0,"Pictures_Links":0,"Pictures_MaxLen":51,"IssueCount":8,"IssueSampleCount":6,"IssueSample":"[Name:Space] Documents\\ leadingspace\\; [Name:Tilde] Documents\\~$lock.docx; [Name:Reserved] Documents\\CON.txt; [Name:vti] Documents\\notes_vti_x.txt; [Link] Desktop\\link; [Len:380] Documents\\Folder_With_A_Rather_Lon...Name_9\\Quarterly_Report_Final_Version_1.docx; +2 more","Summary":"Not ready: Desktop, Documents. 3 long path(s), 5 invalid name(s), 1 link(s) across 11 file(s).","ErrorMessage":"","JsonLength":1810}
+{"ScriptType":"Detection","Solution":"OneDriveKFMReadiness","ScriptVersion":"2.1","DeviceName":"RF-1234","UserName":"JohnDoe","RunContext":"User","CollectionTimeUtc":"2026-09-14T04:39:17Z","Status":"NonCompliant","OneDriveRootPath":"C:\\Users\\JohnDoe\\OneDrive - Contoso","OneDriveRootSource":"RegistryTenant","OneDriveSignedIn":"Yes","OneDriveAccounts":"OneDrive - Contoso","PathLengthLimit":260,"LongPathMode":"Prefixed","KfmState":"NotReady","MigrationReady":"No","FoldersInOneDrive":0,"FoldersReady":1,"FoldersNotReady":2,"FoldersNotFound":0,"LongPathIssue":"Yes","InvalidNameIssue":"Yes","ReparsePointIssue":"Yes","NestedKnownFolders":"No","TotalFiles":11,"TotalLongPaths":3,"TotalBadNames":4,"TotalBadFolders":1,"TotalLinks":1,"TotalTempFiles":0,"ScanErrors":0,"Desktop_Path":"C:\\Users\\JohnDoe\\Desktop","Desktop_State":"NotReady","Desktop_InOneDrive":"No","Desktop_Files":1,"Desktop_LongPaths":0,"Desktop_BadNames":0,"Desktop_BadFolders":0,"Desktop_Links":1,"Desktop_MaxLen":52,"Documents_Path":"C:\\Users\\JohnDoe\\Documents","Documents_State":"NotReady","Documents_InOneDrive":"No","Documents_Files":9,"Documents_LongPaths":3,"Documents_BadNames":4,"Documents_BadFolders":1,"Documents_Links":0,"Documents_MaxLen":380,"Pictures_Path":"C:\\Users\\JohnDoe\\Pictures","Pictures_State":"Ready","Pictures_InOneDrive":"No","Pictures_Files":1,"Pictures_LongPaths":0,"Pictures_BadNames":0,"Pictures_BadFolders":0,"Pictures_Links":0,"Pictures_MaxLen":51,"IssueCount":8,"IssueSampleCount":6,"IssueSample":"[Name:Space] Documents\\ leadingspace\\; [Name:Tilde] Documents\\~$lock.docx; [Name:Reserved] Documents\\CON.txt; [Name:vti] Documents\\notes_vti_x.txt; [Link] Desktop\\link; [Len:380] Documents\\Folder_With_A_Rather_Lon...Name_9\\Quarterly_Report_Final_Version_1.docx; +2 more","Summary":"Not ready: Desktop, Documents. 3 long path(s), 5 invalid name(s), 1 link(s) across 11 file(s).","ErrorMessage":"","JsonLength":1810}
 ```
 
 ### Field reference
@@ -106,8 +132,11 @@ defined in the [standard](../CLAUDE.md#envelope--always-present-always-these-nam
 | Field | Description |
 |---|---|
 | `OneDriveRootPath` | The OneDrive root used for projected paths. |
-| `OneDriveRootSource` | `Registry` (real sync folder found for this user) or `Configured` (`%USERPROFILE%\<name>`). |
+| `OneDriveRootSource` | `RegistryTenant` / `RegistryName` / `Configured` — see [how the projected path is built](#how-the-projected-path-is-built). |
 | `OneDriveSignedIn` | `Yes` if any OneDrive for Business account is configured for the user. |
+| `OneDriveAccounts` | Every business sync folder name found for the user, `; `-separated (e.g. `OneDrive - Contoso`, or an older `OneDrive - contoso.com`). `""` if none. |
+| `KfmState` | **The column to slice a rollout by.** `AlreadyMigrated` — every known folder found is inside the OneDrive root, no issues. `MigratedWithIssues` — all inside OneDrive, but some content cannot sync (fix the names; no move pending). `Partial` — some are inside, the rest are clean. `Ready` — none are inside yet, nothing blocks the move. `NotReady` — not yet migrated and something blocks it. `NotFound` — no known folder resolved. |
+| `FoldersInOneDrive` | How many of the found folders are already under the OneDrive root. |
 | `PathLengthLimit` | The configured limit (260). |
 | `LongPathMode` | `Prefixed` — scan used `\\?\` so files already over 260 characters were found. `Legacy` — they could not be enumerated and appear as `ScanErrors`. |
 | `MigrationReady` | `Yes` when no folder is `NotReady` and no known folders are nested. **The headline column.** |
@@ -118,6 +147,7 @@ defined in the [standard](../CLAUDE.md#envelope--always-present-always-these-nam
 | `TotalBadNames` | Files with an invalid name **or under an invalid folder**. |
 | `TotalBadFolders` | Folders with an invalid name. |
 | `TotalLinks` | Junctions / symlinks found. |
+| `TotalTempFiles` | Office owner files (`~$*`) and `*.tmp` files seen. **Informational** — they do not affect `_State` or `KfmState`, but indicate open documents; `Summary` adds a caution when > 0. |
 | `ScanErrors` | Directories that could not be read (access denied, or too long in `Legacy` mode). Non-zero means the numbers are a lower bound. |
 
 **Per known folder** (`Desktop_*`, `Documents_*`, `Pictures_*`)
@@ -147,8 +177,8 @@ defined in the [standard](../CLAUDE.md#envelope--always-present-always-these-nam
 ## Intune setup
 
 1. **Devices → Scripts and remediations → Create**.
-2. **Detection script file:** `Detect-OneDriveKFMReadiness.ps1` (after setting
-   `$S_OneDriveFolderName`).
+2. **Detection script file:** `_v2/Detect-OneDriveKFMReadiness.ps1` (after setting
+   `$S_OneDriveFolderName` **and** `$S_TenantId`).
 3. **Remediation script file:** leave **empty**.
 4. Settings:
    - **Run this script using the logged-on credentials:** **Yes** — mandatory. Under
@@ -169,7 +199,9 @@ typically seconds, a few minutes for very large profiles.
 2. Select the *Pre-remediation detection output* column → **Transform → Parse → JSON**.
 3. Click **expand** (⇄) → tick every field → OK. One row per device.
 4. Useful views:
+   - `KfmState` — `AlreadyMigrated` / `Partial` / `Ready` / `NotReady` at a glance.
    - `MigrationReady = "No"` — devices needing attention before KFM.
+   - `OneDriveAccounts` — spot users still on an older `OneDrive - <old name>` folder.
    - `LongPathIssue`, `InvalidNameIssue`, `ReparsePointIssue`, `NestedKnownFolders` —
      slice by failure reason.
    - `Status = "Error"` — devices that could not be assessed (check `ErrorMessage`,
@@ -215,8 +247,8 @@ the expected failure.
 
 Intune keeps the first **2048 characters** of detection output; a truncated line is
 invalid JSON and that device's row is lost. With the default three folders and typical
-`C:\Users\<name>` paths the structured fields use roughly **1,450 characters**, leaving
-~550 for `IssueSample` — enough for 5–10 short entries or 2–3 long-path entries. The
+`C:\Users\<name>` paths the structured fields use roughly **1,550 characters**, leaving
+~450 for `IssueSample` — enough for 5–10 short entries or 2–3 long-path entries. The
 script measures the record first and fills the sample only with what fits, so the
 structured columns are never at risk. `JsonLength` shows the real cost per device.
 
@@ -228,9 +260,20 @@ structured columns are never at risk. `JsonLength` shows the real cost per devic
   characters. The scan enumerates through the `\\?\` prefix so files that are *already*
   too long are still found and measured (`LongPathMode = Prefixed`). If a host rejects
   the prefix, the script falls back (`Legacy`) and such folders show up in `ScanErrors`.
-- **Files On-Demand.** Placeholders are reparse points with cloud attributes; they are
-  never counted as links, and a known folder already inside OneDrive skips the link
-  check entirely. No file is hydrated — only names and attributes are read.
+- **Files On-Demand.** Placeholders are reparse points with OneDrive's cloud tag; the
+  scan reads the tag (`LinkType`) and treats them as ordinary content, hydrated or not.
+  If the tag cannot be read the cloud attribute bits are used as a weaker fallback. No
+  file is hydrated — only names, attributes and reparse tags are read.
+- **Non-ASCII characters in `IssueSample`.** Windows PowerShell's `ConvertTo-Json` emits
+  them raw and the Intune Management Extension captures stdout in a codepage that cannot
+  hold them, so a `゛` or a macron arrives in the Intune export as `?`. Structured columns
+  are unaffected. Forcing UTF-8 output was considered and rejected — it could turn `?`
+  into mojibake or break the capture entirely. Exact names belong in the planned on-disk
+  report.
+- **Older sync folder names.** Devices set up before an organisation display-name change
+  keep `OneDrive - <old name>`. With `$S_TenantId` set they report `AlreadyMigrated`;
+  without it they are projected into `OneDrive - <new name>` and look like a pending
+  migration. `OneDriveAccounts` makes the difference visible either way.
 - **Nested folders are double-scanned.** If Pictures sits inside Documents, its files
   are counted in both; `NestedKnownFolders = Yes` tells you why.
 - **Localised folder names.** Known folders are resolved by path via
